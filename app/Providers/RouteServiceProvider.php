@@ -35,6 +35,8 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        Route::model('Task', \App\Models\Task::class);
+
         $this->configureRateLimiting();
 
         $this->routes(function () {
