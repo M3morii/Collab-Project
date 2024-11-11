@@ -46,21 +46,22 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
-            ]);
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'message' => 'Kredensial yang diberikan tidak sesuai.'
+            ], 422);
         }
 
-        // Create token
         $token = $user->createToken('auth_token')->plainTextToken;
+
+        // Redirect berdasarkan role
+        $redirectTo = $user->role === 'admin' ? '/admin/dashboard' : '/dashboard';
 
         return response()->json([
             'user' => $user,
-            'token' => $token
-        ], 200)->withCookie(
-            cookie('auth_token', $token, 60 * 24 * 7) // 7 days
-        );
+            'token' => $token,
+            'redirect_to' => $redirectTo
+        ]);
     }
 
     public function me(Request $request)
