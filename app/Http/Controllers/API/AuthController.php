@@ -17,23 +17,22 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|unique:users',
             'password' => 'required|string|min:8',
-            'role' => 'in:student,admin',
         ]);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'role' => $request->role ?? 'student',
+            'role' => 'student',
+            'is_active' => true
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'message' => 'User registered successfully',
+            'message' => 'Pendaftaran berhasil',
             'user' => new UserResource($user),
-            'token' => $token,
-            'token_type' => 'Bearer'
+            'token' => $token
         ], 201);
     }
 
@@ -46,40 +45,58 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+        if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
         }
 
-        // Create token
+        if (!$user->is_active) {
+            throw ValidationException::withMessages([
+                'email' => ['This account has been deactivated.'],
+            ]);
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'user' => $user,
+            'message' => 'Logged in successfully',
+            'user' => new UserResource($user),
             'token' => $token
-        ], 200)->withCookie(
-            cookie('auth_token', $token, 60 * 24 * 7) // 7 days
-        );
-    }
-
-    public function me(Request $request)
-    {
-        return response()->json($request->user());
+        ]);
     }
 
     public function logout(Request $request)
     {
-        // Revoke current token
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
             'message' => 'Logged out successfully'
-        ])->cookie('auth_token', '', -1); // Remove cookie
+        ]);
     }
 
-    public function csrf()
+    public function me(Request $request)
     {
-        return response()->json(['message' => 'CSRF cookie set'], 200);
+        return new UserResource($request->user());
+    }
+
+    public function users()
+    {
+        $this->authorize('viewAny', User::class);
+        
+        $users = User::all();
+        
+        return UserResource::collection($users);
+    }
+
+    public function toggleActive(Request $request, User $user)
+    {
+        $this->authorize('update', $user);
+
+        $user->update([
+            'is_active' => !$user->is_active
+        ]);
+
+        return new UserResource($user);
     }
 }

@@ -13,13 +13,11 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('users', function (Blueprint $table) {
+        Schema::create('classes', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->string('password');
-            $table->enum('role', ['admin', 'teacher', 'student']);
-            $table->boolean('is_active')->default(true);
+            $table->string('name');                                    // Nama kelas (misal: XII RPL 1)
+            $table->foreignId('teacher_id')->constrained('users');     // Guru pengajar
+            $table->string('description')->nullable();                 // Deskripsi kelas [TAMBAHAN]
             $table->timestamps();
         });
     }
@@ -31,6 +29,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('users');
+        Schema::dropIfExists('classes');
     }
 };

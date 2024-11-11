@@ -16,7 +16,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
-        'avatar'
+        'is_active'
     ];
 
     protected $hidden = [
@@ -24,60 +24,49 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    protected $casts = [
-        'email_verified_at' => 'datetime'
-    ];
+    // Teacher: kelas yang diajar
+    public function teacherClasses()
+    {
+        return $this->hasMany(Classes::class, 'teacher_id');
+    }
 
-    // Tasks yang dibuat user
+    // Student: keanggotaan kelompok
+    public function groupMembers()
+    {
+        return $this->hasMany(GroupMember::class, 'student_id');
+    }
+
+    // Student: kelompok yang diikuti
+    public function groups()
+    {
+        return $this->belongsToMany(Group::class, 'group_members', 'student_id', 'group_id');
+    }
+
+    // Teacher: tugas yang dibuat
     public function createdTasks()
     {
         return $this->hasMany(Task::class, 'created_by_id');
     }
-    
 
-    // Tasks yang ditugaskan ke user
-    public function assignedTasks()
-    {
-        return $this->belongsToMany(Task::class, 'task_assignments', 'user_id', 'task_id')
-            ->withTimestamps();
-    }
-
-    // Komentar yang dibuat user
-    public function comments()
-    {
-        return $this->hasMany(Comment::class);
-    }
-
-    // Notifikasi user
-    public function notifications()
-    {
-        return $this->hasMany(Notification::class);
-    }
-
-    // File yang diupload user
+    // File yang diupload
     public function uploadedAttachments()
     {
         return $this->hasMany(Attachment::class, 'uploaded_by_id');
     }
 
+    // Role checks
     public function isAdmin()
     {
         return $this->role === 'admin';
     }
 
+    public function isTeacher()
+    {
+        return $this->role === 'teacher';
+    }
+
     public function isStudent()
     {
         return $this->role === 'student';
-    }
-
-    // Add submission relationship
-    public function submissions()
-    {
-        return $this->hasMany(TaskSubmission::class, 'student_id');
-    }
-
-    public function reviewedSubmissions()
-    {
-        return $this->hasMany(TaskSubmission::class, 'reviewed_by_id');
     }
 }
