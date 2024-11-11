@@ -8,29 +8,23 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Attachment extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         'filename',
         'file_path',
-        'file_type',
-        'file_size',
-        'task_id',
+        'attachable_type',
+        'attachable_id',
         'uploaded_by_id'
     ];
 
-    protected $casts = [
-        'file_size' => 'integer',
-        'deleted_at' => 'datetime'
-    ];
-
-    public function task()
+    public function attachable()
     {
-        return $this->belongsTo(Task::class);
+        return $this->morphTo();
     }
 
     public function uploader()
     {
         return $this->belongsTo(User::class, 'uploaded_by_id');
     }
-} 
+}

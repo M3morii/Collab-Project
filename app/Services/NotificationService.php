@@ -2,34 +2,31 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use App\Models\Task;
+use App\Models\Submission;
+use Illuminate\Support\Facades\Mail;
 
 class NotificationService
 {
-    public function createTaskAssignedNotification($user, $task)
+    public function sendTaskNotification(Task $task)
     {
-        return $user->notifications()->create([
-            'type' => 'task_assigned',
-            'content' => "Anda telah ditugaskan untuk mengerjakan '{$task->title}'",
-            'data' => [
-                'task_id' => $task->id,
-                'task_title' => $task->title
-            ]
-        ]);
+        $students = $task->group->students;
+        
+        foreach ($students as $student) {
+            Mail::raw("Anda mendapat tugas baru: {$task->title}", function($message) use ($student) {
+                $message->to($student->email)
+                        ->subject('Tugas Baru');
+            });
+        }
     }
 
-    public function createCommentNotification($user, $task, $comment)
+    public function sendSubmissionNotification(Submission $submission)
     {
-        return $user->notifications()->create([
-            'type' => 'comment',
-            'data' => [
-                'task_id' => $task->id,
-                'task_title' => $task->title,
-                'comment_id' => $comment->id,
-                'comment_content' => $comment->content,
-                'commenter_name' => $comment->user->name
-            ]
-        ]);
+        $teacher = $submission->task->creator;
+        
+        Mail::raw("Ada submission baru untuk tugas: {$submission->task->title}", function($message) use ($teacher) {
+            $message->to($teacher->email)
+                    ->subject('Submission Baru');
+        });
     }
 } 
