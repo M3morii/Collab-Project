@@ -3,71 +3,42 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Task extends Model
 {
-    use SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         'title',
         'description',
-        'status',
-        'priority',
-        'deadline',
-        'created_by_id'
+        'group_id',
+        'created_by_id',
+        'due_date',
+        'status'
     ];
 
     protected $casts = [
-        'deadline' => 'datetime'
+        'due_date' => 'datetime'
     ];
+
+    public function group()
+    {
+        return $this->belongsTo(Group::class);
+    }
 
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by_id');
     }
 
-    public function assignees()
+    public function submission()
     {
-        return $this->belongsToMany(User::class, 'task_assignments', 'task_id', 'user_id');
-    }
-
-    public function comments()
-    {
-        return $this->hasMany(Comment::class);
+        return $this->hasOne(Submission::class);
     }
 
     public function attachments()
     {
-        return $this->hasMany(Attachment::class);
+        return $this->morphMany(Attachment::class, 'attachable');
     }
-
-    public function notifications()
-    {
-        return $this->hasMany(Notification::class);
-    }
-
-    public function submissions()
-    {
-        return $this->hasMany(TaskSubmission::class);
-    }
-
-    public function pendingSubmissions()
-    {
-        return $this->submissions()->pending();
-    }
-
-    public function reviewedSubmissions()
-    {
-        return $this->submissions()->reviewed();
-    }
-
-    public function isAssignedTo($user)
-    {
-        return $this->assignees()
-            ->where('task_assignments.user_id', $user->id)
-            ->exists();
-    }
-} 
+}

@@ -1,16 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\API;
+namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\Task;
-use App\Models\User;
+use App\Http\Resources\TaskResource;
 use App\Http\Requests\TaskRequest;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
-use App\Http\Resources\TaskResource;
-use Illuminate\Support\Facades\DB;
-use App\Models\TaskSubmission;
 
 class TaskController extends Controller
 {
@@ -21,156 +17,75 @@ class TaskController extends Controller
         $this->notificationService = $notificationService;
     }
 
-    public function index(Request $request)
+    public function index()
     {
-        $query = Task::with(['creator', 'assignees']);
+        $user = auth()->user();
         
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if (auth()->user()->isStudent()) {
-            $query->whereHas('assignees', function($q) {
-                $q->where('users.id', auth()->id());
-            });
-        }
-
-        return TaskResource::collection(
-            $query->latest()->paginate(10)
-        );
-    }
-
-    public function assignedTasks()
-    {
-        $userId = auth()->id();
-        
-        // Get all task IDs that have been submitted by this user
-        $submittedTaskIds = TaskSubmission::where('student_id', $userId)
-            ->whereIn('status', ['submitted', 'reviewed', 'rejected'])
-            ->pluck('task_id');
-        
-        // Get assigned tasks that haven't been submitted
-        $tasks = Task::whereHas('assignees', function($query) use ($userId) {
-            $query->where('users.id', $userId);
-        })
-        ->whereNotIn('id', $submittedTaskIds)
-        ->with(['creator', 'assignees'])
-        ->latest()
-        ->get();
+        $tasks = match($user->role) {
+            'teacher' => Task::whereHas('group.class', function($query) use ($user) {
+                $query->where('teacher_id', $user->id);
+            })->with(['group', 'attachments'])->get(),
+            'student' => Task::whereHas('group.members', function($query) use ($user) {
+                $query->where('student_id', $user->id);
+            })->with(['group', 'attachments'])->get(),
+            default => Task::with(['group', 'attachments'])->get()
+        };
 
         return TaskResource::collection($tasks);
     }
 
-    public function submitTask(Request $request, Task $task)
+    public function store(TaskRequest $request)
     {
-        if (!$task->assignees()->where('users.id', auth()->id())->exists()) {
-            return response()->json([
-                'message' => 'Anda tidak ditugaskan untuk task ini',
-                'error_code' => 'NOT_ASSIGNED'
-            ], 403);
-        }
+        $this->authorize('create', Task::class);
 
-        $request->validate([
-            'submission_content' => 'required|string',
-            'attachments.*' => 'file|max:10240' // 10MB max per file
+        $task = Task::create([
+            'title' => $request->title,
+            'description' => $request->description,
+            'group_id' => $request->group_id,
+            'created_by_id' => auth()->id(),
+            'due_date' => $request->due_date,
+            'status' => 'pending'
         ]);
 
-        // Create submission logic here
-        $submission = $task->submissions()->create([
-            'content' => $request->submission_content,
-            'student_id' => $request->user()->id,
-            'status' => 'submitted'
-        ]);
-
-        // Handle attachments
+        // Handle file attachments
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                // Store attachment logic
+                $task->attachments()->create([
+                    'filename' => $file->getClientOriginalName(),
+                    'file_path' => $file->store('tasks'),
+                    'uploaded_by_id' => auth()->id()
+                ]);
             }
         }
 
-        return response()->json([
-            'message' => 'Task submitted successfully',
-            'submission' => $submission
-        ]);
-    }
+        // Notify group members
+        $this->notificationService->notifyTaskAssigned($task);
 
-    public function store(TaskRequest $request)
-    {
-        $task = Task::create(array_merge(
-            $request->validated(),
-            [
-                'created_by_id' => auth()->id(),
-                'status' => 'todo'
-            ]
-        ));
-
-        if ($request->has('assignees')) {
-            $task->assignees()->sync($request->assignees);
-        }
-
-        return new TaskResource($task->load(['creator', 'assignees']));
+        return new TaskResource($task->load(['group', 'attachments']));
     }
 
     public function show(Task $task)
     {
-        try {
-            $task->load(['creator', 'assignees', 'comments.user', 'attachments']);
-            return new TaskResource($task);
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'Task tidak ditemukan'], 404);
-        }
+        $this->authorize('view', $task);
+
+        return new TaskResource($task->load(['group', 'attachments', 'submission']));
     }
 
     public function update(TaskRequest $request, Task $task)
     {
-        $task->update($request->validated());
-        
-        if ($request->has('assignees')) {
-            $task->assignees()->sync($request->assignees);
-        }
+        $this->authorize('update', $task);
 
-        return response()->json($task->load(['creator', 'assignees']));
+        $task->update($request->validated());
+
+        return new TaskResource($task);
     }
 
     public function destroy(Task $task)
     {
+        $this->authorize('delete', $task);
+
         $task->delete();
-        return response()->json(['message' => 'Task deleted successfully']);
+
+        return response()->json(['message' => 'Tugas berhasil dihapus']);
     }
-
-    public function assign(Request $request, Task $task)
-    {
-        $request->validate([
-            'user_ids' => 'required|array',
-            'user_ids.*' => 'exists:users,id'
-        ]);
-
-        $task->assignees()->sync($request->user_ids);
-        
-        // Notify new assignees
-        foreach ($request->user_ids as $userId) {
-            $user = User::find($userId);
-            $this->notificationService->createTaskAssignedNotification($user, $task);
-        }
-
-        return response()->json($task->load('assignees'));
-    }
-
-    public function dashboard()
-    {
-        $user = auth()->user();
-        
-        $stats = [
-            'total_tasks' => $user->assignedTasks()->count(),
-            'completed_tasks' => $user->assignedTasks()->where('status', 'done')->count(),
-            'pending_tasks' => $user->assignedTasks()->where('status', '!=', 'done')->count(),
-            'upcoming_deadlines' => $user->assignedTasks()
-                ->where('deadline', '>=', now())
-                ->where('deadline', '<=', now()->addDays(7))
-                ->get()
-        ];
-
-        return response()->json($stats);
-    }
-} 
+}
