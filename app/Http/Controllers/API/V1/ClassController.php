@@ -3,83 +3,120 @@
 namespace App\Http\Controllers\API\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\ClassResource;
 use App\Http\Requests\ClassRequest;
+use App\Http\Resources\ClassResource;
 use App\Models\Classes;
+use App\Models\User;
+use App\Services\ClassService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ClassController extends Controller
 {
-    public function index()
-    {
-        $user = auth()->user();
-        
-        $classes = match($user->role) {
-            'admin' => Classes::with('teacher')->get(),
-            'teacher' => Classes::where('teacher_id', $user->id)->get(),
-            'student' => $user->classes()->get(),
-        };
+    protected $classService;
 
-        return ClassResource::collection($classes);
+    public function __construct(ClassService $classService)
+    {
+        $this->classService = $classService;
     }
 
-    public function store(ClassRequest $request)
+    public function index(): JsonResponse
+    {
+        $this->authorize('viewAny', Classes::class);
+        
+        $user = User::find(auth()->id());
+        $classes = $this->classService->getClassesByRole($user);
+
+        return response()->json([
+            'classes' => ClassResource::collection($classes)
+        ]);
+    }
+
+    public function store(ClassRequest $request): JsonResponse
     {
         $this->authorize('create', Classes::class);
+        
+        $class = $this->classService->create($request->validated());
 
-        $class = Classes::create($request->validated());
-
-        return new ClassResource($class);
+        return response()->json([
+            'message' => 'Class created successfully',
+            'class' => new ClassResource($class)
+        ], 201);
     }
 
-    public function show(Classes $class)
+    public function show(Classes $class): JsonResponse
     {
         $this->authorize('view', $class);
 
-        return new ClassResource($class->load(['teacher', 'users']));
+        return response()->json([
+            'class' => new ClassResource($class->load(['teacher', 'users']))
+        ]);
     }
 
-    public function update(ClassRequest $request, Classes $class)
+    public function update(ClassRequest $request, Classes $class): JsonResponse
     {
         $this->authorize('update', $class);
 
-        $class->update($request->validated());
+        $class = $this->classService->update($class, $request->validated());
 
-        return new ClassResource($class);
+        return response()->json([
+            'message' => 'Class updated successfully',
+            'class' => new ClassResource($class)
+        ]);
     }
 
-    public function destroy(Classes $class)
+    public function destroy(Classes $class): JsonResponse
     {
         $this->authorize('delete', $class);
 
         $class->delete();
 
-        return response()->json(['message' => 'Class deleted successfully']);
+        return response()->json([
+            'message' => 'Class deleted successfully'
+        ]);
     }
 
-    public function addStudent(Request $request, Classes $class)
+    public function getAvailableStudents(Classes $class): JsonResponse
     {
-        $this->authorize('update', $class);
+        $this->authorize('manageStudents', $class);
 
-        $validated = $request->validate([
-            'user_id' => 'required|exists:users,id'
+        $students = $this->classService->getAvailableStudents($class);
+
+        return response()->json([
+            'students' => $students
         ]);
-
-        $class->users()->attach($validated['user_id'], ['role' => 'student']);
-
-        return new ClassResource($class->load('users'));
     }
 
-    public function removeStudent(Request $request, Classes $class)
+    public function addStudents(Request $request, Classes $class): JsonResponse
     {
-        $this->authorize('update', $class);
+        $this->authorize('manageStudents', $class);
 
-        $validated = $request->validate([
-            'user_id' => 'required|exists:users,id'
+        $request->validate([
+            'student_ids' => 'required|array',
+            'student_ids.*' => 'exists:users,id,role,student'
         ]);
 
-        $class->users()->detach($validated['user_id']);
+        $addedCount = $this->classService->addStudents($class, $request->student_ids);
 
-        return new ClassResource($class->load('users'));
+        return response()->json([
+            'message' => "{$addedCount} students added to class successfully"
+        ]);
+    }
+
+    public function removeStudent(Classes $class, User $student): JsonResponse
+    {
+        $this->authorize('manageStudents', $class);
+
+        if ($student->role !== 'student') {
+            return response()->json([
+                'message' => 'User is not a student'
+            ], 422);
+        }
+
+        $this->classService->removeStudent($class, $student);
+
+        return response()->json([
+            'message' => 'Student removed from class successfully'
+        ]);
     }
 } 
