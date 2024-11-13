@@ -4,41 +4,55 @@ namespace App\Http\Controllers\API\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
-use Illuminate\Http\Request;
+use App\Services\AuthService;
+use Illuminate\Http\JsonResponse;
 
 class AuthController extends Controller
 {
-    public function login(LoginRequest $request)
-    {
-        $credentials = $request->validated();
-        
-        if (!auth()->attempt($credentials)) {
-            return response()->json([
-                'message' => 'Invalid credentials'
-            ], 401);
-        }
+    protected $authService;
 
-        $user = auth()->user();
-        $token = $user->createToken('auth-token')->plainTextToken;
+    public function __construct(AuthService $authService)
+    {
+        $this->authService = $authService;
+    }
+
+    public function register(RegisterRequest $request): JsonResponse
+    {
+        $result = $this->authService->register($request->validated());
 
         return response()->json([
-            'user' => new UserResource($user),
-            'token' => $token
+            'message' => 'Registration successful',
+            'user' => new UserResource($result['user']),
+            'token' => $result['token']
+        ], 201);
+    }
+
+    public function login(LoginRequest $request): JsonResponse
+    {
+        $result = $this->authService->login($request->validated());
+
+        return response()->json([
+            'message' => 'Login successful',
+            'user' => new UserResource($result['user']),
+            'token' => $result['token']
         ]);
     }
 
-    public function logout()
+    public function logout(): JsonResponse
     {
-        auth()->user()->tokens()->delete();
-        
+        $this->authService->logout();
+
         return response()->json([
-            'message' => 'Successfully logged out'
+            'message' => 'Logged out successfully'
         ]);
     }
 
-    public function profile()
+    public function profile(): JsonResponse
     {
-        return new UserResource(auth()->user());
+        return response()->json([
+            'user' => new UserResource(auth()->user())
+        ]);
     }
 } 

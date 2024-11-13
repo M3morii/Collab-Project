@@ -15,8 +15,8 @@ class ClassRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:1000',
-            'teacher_id' => 'required|exists:users,id',
+            'description' => 'nullable|string',
+            'teacher_id' => 'required|exists:users,id,role,teacher',
             'kkm_score' => 'required|integer|min:0|max:100',
             'academic_year' => 'required|string|max:9', // Format: 2023/2024
             'semester' => 'required|in:1,2',
