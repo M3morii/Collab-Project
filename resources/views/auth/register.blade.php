@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Login</title>
+    <title>Register</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
@@ -12,14 +12,19 @@
     <div class="min-vh-100 d-flex align-items-center justify-content-center">
         <div class="card shadow-sm" style="width: 400px">
             <div class="card-body p-4">
-                <h2 class="text-center mb-4">Login</h2>
+                <h2 class="text-center mb-4">Register</h2>
 
                 <div id="error-messages" class="alert alert-danger d-none">
                     <ul class="mb-0"></ul>
                 </div>
 
-                <form id="loginForm">
+                <form id="registerForm">
                     @csrf
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nama Lengkap</label>
+                        <input type="text" name="name" id="name" class="form-control" required>
+                    </div>
+
                     <div class="mb-3">
                         <label for="email" class="form-label">Email</label>
                         <input type="email" name="email" id="email" class="form-control" required>
@@ -37,15 +42,15 @@
 
                     <div class="mb-3">
                         <button type="submit" class="btn btn-primary w-100" id="submitBtn">
-                            Masuk
+                            Daftar
                         </button>
                     </div>
                 </form>
 
                 <p class="text-center mb-0">
-                    Belum punya akun?
-                    <a href="{{ route('register') }}" class="text-decoration-none">
-                        Daftar disini
+                    Sudah punya akun?
+                    <a href="{{ route('login') }}" class="text-decoration-none">
+                        Login disini
                     </a>
                 </p>
             </div>
@@ -66,8 +71,8 @@
             toggleIcon.classList.toggle('bi-eye-slash');
         });
 
-        // Login Form Submit
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+        // Register Form Submit
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const submitBtn = document.getElementById('submitBtn');
@@ -80,7 +85,7 @@
             try {
                 const formData = new FormData(this);
                 
-                const response = await fetch('/login', {
+                const response = await fetch('/api/v1/register', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -95,7 +100,11 @@
                     throw data;
                 }
 
-                window.location.href = data.redirect_to;
+                // Simpan token dan redirect
+                if (data.token) {
+                    localStorage.setItem('token', data.token);
+                    window.location.href = '/dashboard';
+                }
 
             } catch (error) {
                 errorList.innerHTML = '';
@@ -117,7 +126,7 @@
             } finally {
                 // Reset submit button
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Masuk';
+                submitBtn.innerHTML = 'Daftar';
             }
         });
     </script>

@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\TaskController;
+use App\Models\Task;
 
 /*
 |--------------------------------------------------------------------------
@@ -36,7 +37,8 @@ Route::middleware('guest')->group(function () {
 // Admin routes
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/admin/dashboard', function () {
-        return view('admin.dashboard');
+        $tasks = Task::orderBy('created_at', 'desc')->get();
+        return view('admin.dashboard', compact('tasks'));
     })->name('admin.dashboard');
     
     Route::resource('tasks', TaskController::class);
