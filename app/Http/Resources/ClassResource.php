@@ -13,9 +13,13 @@ class ClassResource extends JsonResource
             'name' => $this->name,
             'description' => $this->description,
             'teacher' => new UserResource($this->whenLoaded('teacher')),
-            'groups' => GroupResource::collection($this->whenLoaded('groups')),
+            'kkm_score' => $this->kkm_score,
+            'academic_year' => $this->academic_year,
+            'semester' => $this->semester,
+            'status' => $this->status,
+            'students' => UserResource::collection($this->whenLoaded('users')),
             'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            'updated_at' => $this->updated_at
         ];
     }
 }

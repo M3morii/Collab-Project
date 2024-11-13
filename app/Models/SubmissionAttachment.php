@@ -3,24 +3,22 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class Attachment extends Model
+class SubmissionAttachment extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'submission_id',
+        'uploaded_by_id',
         'filename',
-        'file_path',
-        'attachable_type',
-        'attachable_id',
-        'uploaded_by_id'
+        'file_path'
     ];
 
-    public function attachable()
+    public function submission()
     {
-        return $this->morphTo();
+        return $this->belongsTo(Submission::class);
     }
 
     public function uploader()

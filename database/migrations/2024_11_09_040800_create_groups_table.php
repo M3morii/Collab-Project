@@ -12,14 +12,16 @@ return new class extends Migration
      * @return void
      */
     public function up()
-    {
-        Schema::create('groups', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');                                    // Nama kelompok
-            $table->foreignId('class_id')->constrained('classes');     // Relasi ke kelas
-            $table->timestamps();
-        });
-    }
+{
+    Schema::create('groups', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->foreignId('class_id')
+              ->constrained()
+              ->onDelete('cascade');  // Jika kelas dihapus, group juga terhapus
+        $table->timestamps();
+    });
+}
 
     /**
      * Reverse the migrations.

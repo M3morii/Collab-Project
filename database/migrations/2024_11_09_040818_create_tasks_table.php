@@ -12,18 +12,28 @@ return new class extends Migration
      * @return void
      */
     public function up()
-    {
-        Schema::create('tasks', function (Blueprint $table) {
-            $table->id();
-            $table->string('title');                                   // Judul tugas
-            $table->text('description');                               // Deskripsi tugas
-            $table->foreignId('group_id')->constrained('groups');      // Untuk kelompok
-            $table->foreignId('created_by_id')->constrained('users');  // Dibuat guru
-            $table->dateTime('due_date');                             // Deadline
-            $table->enum('status', ['pending', 'completed'])->default('pending'); // [TAMBAHAN]
-            $table->timestamps();
-        });
-    }
+{
+    Schema::create('tasks', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('class_id')
+              ->constrained()
+              ->onDelete('cascade');
+        $table->string('title');
+        $table->text('description');
+        $table->dateTime('start_date');
+        $table->dateTime('deadline');
+        $table->enum('task_type', ['individual', 'group']);
+        $table->integer('max_score');
+        $table->decimal('weight_percentage', 5, 2);
+        $table->enum('status', ['draft', 'published', 'closed'])
+              ->default('draft');
+        $table->foreignId('created_by')
+              ->constrained('users')
+              ->onDelete('cascade');
+        $table->softDeletes();
+        $table->timestamps();
+    });
+}
 
     /**
      * Reverse the migrations.

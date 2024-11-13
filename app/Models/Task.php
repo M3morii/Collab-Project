@@ -4,41 +4,46 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'title',
-        'description',
-        'group_id',
-        'created_by_id',
-        'due_date',
-        'status'
+        'class_id', 'title', 'description',
+        'start_date', 'deadline', 'task_type',
+        'max_score', 'weight_percentage', 'status',
+        'created_by'
     ];
 
     protected $casts = [
-        'due_date' => 'datetime'
+        'start_date' => 'datetime',
+        'deadline' => 'datetime'
     ];
 
-    public function group()
+    public function class()
     {
-        return $this->belongsTo(Group::class);
+        return $this->belongsTo(Classes::class);
     }
 
     public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by_id');
+        return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function submission()
+    public function taskGroups()
     {
-        return $this->hasOne(Submission::class);
+        return $this->hasMany(TaskGroup::class);
+    }
+
+    public function submissions()
+    {
+        return $this->hasMany(Submission::class);
     }
 
     public function attachments()
     {
-        return $this->morphMany(Attachment::class, 'attachable');
+        return $this->hasMany(TaskAttachment::class);
     }
 }

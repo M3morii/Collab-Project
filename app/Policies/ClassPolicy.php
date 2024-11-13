@@ -2,36 +2,40 @@
 
 namespace App\Policies;
 
-use App\Models\Classes;
 use App\Models\User;
-use Illuminate\Auth\Access\HandlesAuthorization;
+use App\Models\Classes;
 
 class ClassPolicy
 {
-    public function viewAny(User $user)
+    public function viewAny(User $user): bool
     {
-        return true; // Semua role bisa lihat list kelas
+        return true; // Semua user bisa lihat daftar kelas
     }
 
-    public function view(User $user, Classes $class)
+    public function view(User $user, Classes $class): bool
     {
-        return $user->isAdmin() || 
-               $user->isTeacher() || 
-               $class->groups->flatMap->students->contains($user->id);
+        return $user->role === 'admin' || 
+               $class->teacher_id === $user->id || 
+               $class->users()->where('user_id', $user->id)->exists();
     }
 
-    public function create(User $user)
+    public function create(User $user): bool
     {
-        return $user->isTeacher();
+        return in_array($user->role, ['admin', 'teacher']);
     }
 
-    public function update(User $user, Classes $class)
+    public function update(User $user, Classes $class): bool
     {
-        return $user->isTeacher() && $class->teacher_id === $user->id;
+        return $user->role === 'admin' || $class->teacher_id === $user->id;
     }
 
-    public function delete(User $user, Classes $class)
+    public function delete(User $user, Classes $class): bool
     {
-        return $user->isTeacher() && $class->teacher_id === $user->id;
+        return $user->role === 'admin';
+    }
+
+    public function manageStudents(User $user, Classes $class): bool
+    {
+        return $user->role === 'admin' || $class->teacher_id === $user->id;
     }
 }

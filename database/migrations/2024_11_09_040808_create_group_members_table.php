@@ -15,10 +15,17 @@ return new class extends Migration
 {
     Schema::create('group_members', function (Blueprint $table) {
         $table->id();
-        $table->foreignId('group_id')->constrained('groups');      // Relasi ke kelompok
-        $table->foreignId('student_id')->constrained('users');     // Relasi ke siswa
-        $table->boolean('is_leader')->default(false);              // Status ketua
+        $table->foreignId('group_id')
+              ->constrained()
+              ->onDelete('cascade');  // Jika group dihapus, member juga terhapus
+        $table->foreignId('student_id')
+              ->constrained('users')
+              ->onDelete('cascade');  // Jika user dihapus, membership juga terhapus
+        $table->boolean('is_leader')->default(false);
         $table->timestamps();
+
+        // Memastikan student hanya bisa jadi member di group yang sama sekali
+        $table->unique(['group_id', 'student_id']);
     });
 }
 
