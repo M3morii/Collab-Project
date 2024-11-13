@@ -3,29 +3,38 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Models\Task;
 
 class SubmissionRequest extends FormRequest
 {
     public function authorize()
     {
-        return $this->user()->isStudent();
+        return true;
     }
 
     public function rules()
     {
-        return [
+        $task = Task::findOrFail($this->task_id);
+        
+        $rules = [
             'task_id' => 'required|exists:tasks,id',
-            'group_id' => 'required|exists:groups,id',
-            'description' => 'required|string',
-            'attachments.*' => 'sometimes|file|max:10240' // 10MB max
+            'content' => 'required|string',
+            'attachments.*' => 'nullable|file|max:10240'
         ];
+
+        // Jika task bertipe group, task_group_id wajib diisi
+        if ($task->task_type === 'group') {
+            $rules['task_group_id'] = 'required|exists:task_groups,id';
+        }
+
+        return $rules;
     }
 
     public function messages()
     {
         return [
-            'description.required' => 'Deskripsi jawaban wajib diisi',
-            'attachments.*.max' => 'Ukuran file maksimal 10MB'
+            'task_group_id.required' => 'For group tasks, you must specify your group.',
+            'attachments.*.max' => 'Each attachment must not exceed 10MB.'
         ];
     }
 }

@@ -6,67 +6,66 @@ use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'role',
-        'is_active'
+        'name', 'email', 'password', 'role',
+        'avatar', 'phone', 'address', 'is_active'
     ];
 
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $hidden = ['password', 'remember_token'];
 
-    // Teacher: kelas yang diajar
-    public function teacherClasses()
+    // Classes yang diajar (sebagai teacher)
+    public function teachingClasses()
     {
         return $this->hasMany(Classes::class, 'teacher_id');
     }
 
-    // Student: keanggotaan kelompok
-    public function groupMembers()
+    // Classes yang diikuti (many-to-many)
+    public function classes()
     {
-        return $this->hasMany(GroupMember::class, 'student_id');
+        return $this->belongsToMany(Classes::class, 'class_users')
+                    ->withPivot('role', 'status')
+                    ->withTimestamps();
     }
 
-    // Student: kelompok yang diikuti
-    public function groups()
-    {
-        return $this->belongsToMany(Group::class, 'group_members', 'student_id', 'group_id');
-    }
-
-    // Teacher: tugas yang dibuat
+    // Tasks yang dibuat (sebagai teacher)
     public function createdTasks()
     {
-        return $this->hasMany(Task::class, 'created_by_id');
+        return $this->hasMany(Task::class, 'created_by');
     }
 
-    // File yang diupload
-    public function uploadedAttachments()
+    // Task Groups yang dibuat
+    public function createdTaskGroups()
     {
-        return $this->hasMany(Attachment::class, 'uploaded_by_id');
+        return $this->hasMany(TaskGroup::class, 'created_by');
     }
 
-    // Role checks
-    public function isAdmin()
+    // Keanggotaan dalam task groups
+    public function taskGroups()
     {
-        return $this->role === 'admin';
+        return $this->belongsToMany(TaskGroup::class, 'task_group_members')
+                    ->withTimestamps();
     }
 
-    public function isTeacher()
+    // Submissions yang dibuat
+    public function submissions()
     {
-        return $this->role === 'teacher';
+        return $this->hasMany(Submission::class, 'user_id');
     }
 
-    public function isStudent()
+    // Uploaded attachments
+    public function taskAttachments()
     {
-        return $this->role === 'student';
+        return $this->hasMany(TaskAttachment::class, 'uploaded_by');
+    }
+
+    public function submissionAttachments()
+    {
+        return $this->hasMany(SubmissionAttachment::class, 'uploaded_by');
     }
 }

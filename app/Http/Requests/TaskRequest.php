@@ -8,29 +8,31 @@ class TaskRequest extends FormRequest
 {
     public function authorize()
     {
-        return $this->user()->isTeacher();
+        return true;
     }
 
     public function rules()
     {
         return [
+            'class_id' => 'required|exists:classes,id',
             'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'group_id' => 'required|exists:groups,id',
-            'due_date' => 'required|date|after:today',
-            'attachments.*' => 'sometimes|file|max:10240', // 10MB max
+            'description' => 'nullable|string',
+            'start_date' => 'required|date|after_or_equal:today',
+            'deadline' => 'required|date|after:start_date',
+            'task_type' => 'required|in:individual,group',
+            'max_score' => 'required|integer|min:0|max:100',
+            'weight_percentage' => 'required|integer|min:0|max:100',
+            'status' => 'required|in:draft,published,closed',
+            'attachments.*' => 'nullable|file|max:10240' // max 10MB
         ];
     }
 
     public function messages()
     {
         return [
-            'title.required' => 'Judul tugas wajib diisi',
-            'description.required' => 'Deskripsi tugas wajib diisi',
-            'group_id.required' => 'Kelompok wajib dipilih',
-            'due_date.required' => 'Tanggal deadline wajib diisi',
-            'due_date.after' => 'Tanggal deadline harus setelah hari ini',
-            'attachments.*.max' => 'Ukuran file maksimal 10MB'
+            'deadline.after' => 'The deadline must be after the start date.',
+            'weight_percentage.max' => 'The weight percentage cannot be greater than 100.',
+            'attachments.*.max' => 'Each attachment must not exceed 10MB.'
         ];
     }
 }

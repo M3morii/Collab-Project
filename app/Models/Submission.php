@@ -10,11 +10,9 @@ class Submission extends Model
     use HasFactory;
 
     protected $fillable = [
-        'task_id',
-        'group_id',
-        'description',
-        'submitted_at',
-        'status'
+        'task_id', 'user_id', 'task_group_id',
+        'content', 'score', 'feedback', 'status',
+        'submitted_at'
     ];
 
     protected $casts = [
@@ -26,13 +24,18 @@ class Submission extends Model
         return $this->belongsTo(Task::class);
     }
 
-    public function group()
+    public function user()
     {
-        return $this->belongsTo(Group::class);
+        return $this->belongsTo(User::class);
+    }
+
+    public function taskGroup()
+    {
+        return $this->belongsTo(TaskGroup::class);
     }
 
     public function attachments()
     {
-        return $this->morphMany(Attachment::class, 'attachable');
+        return $this->hasMany(SubmissionAttachment::class);
     }
 }
