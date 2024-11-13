@@ -9,7 +9,10 @@ use App\Http\Controllers\API\V1\{
     TaskGroupController,
     SubmissionController,
     TaskAttachmentController,
-    SubmissionAttachmentController
+    SubmissionAttachmentController,
+    Admin\DashboardController,
+    Admin\TeacherController,
+    Admin\StudentController
 };
 
 /*
@@ -84,3 +87,20 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('task-attachments/{attachment}/download', [TaskAttachmentController::class, 'download']);
     Route::get('submission-attachments/{attachment}/download', [SubmissionAttachmentController::class, 'download']);
 });
+
+// Admin Routes
+Route::prefix('v1/admin')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    // Dashboard
+    Route::get('dashboard/overview', [DashboardController::class, 'overview']);
+    
+    // Teacher Management
+    Route::apiResource('teachers', TeacherController::class);
+    Route::get('teachers/{teacher}/stats', [TeacherController::class, 'teacherStats']);
+    
+    // Student Management
+    Route::apiResource('students', StudentController::class)->except(['store', 'destroy']);
+    Route::get('students/{student}/stats', [StudentController::class, 'studentStats']);
+});
+
+// Public registration (student only)
+Route::post('v1/register', [AuthController::class, 'register']);
