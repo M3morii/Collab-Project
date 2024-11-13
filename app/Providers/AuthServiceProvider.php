@@ -4,52 +4,59 @@ namespace App\Providers;
 
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
-use App\Models\Task;
-use App\Policies\TaskPolicy;
-use App\Models\Attachment;
-use App\Policies\AttachmentPolicy;
-use App\Models\Classes;
-use App\Policies\ClassPolicy;
-use App\Models\Group;
-use App\Policies\GroupPolicy;
-use App\Models\Submission;
-use App\Policies\SubmissionPolicy;
+use App\Models\{
+    User,
+    Classes,
+    Task,
+    TaskGroup,
+    Submission,
+    TaskAttachment,
+    SubmissionAttachment
+};
+use App\Policies\{
+    UserPolicy,
+    ClassPolicy,
+    TaskPolicy,
+    TaskGroupPolicy,
+    SubmissionPolicy,
+    AttachmentPolicy
+};
 
 class AuthServiceProvider extends ServiceProvider
 {
     /**
-     * The policy mappings for the application.
+     * The model to policy mappings for the application.
      *
      * @var array<class-string, class-string>
      */
     protected $policies = [
+        User::class => UserPolicy::class,
         Classes::class => ClassPolicy::class,
-        Group::class => GroupPolicy::class,
         Task::class => TaskPolicy::class,
+        TaskGroup::class => TaskGroupPolicy::class,
         Submission::class => SubmissionPolicy::class,
-        Attachment::class => AttachmentPolicy::class,
+        TaskAttachment::class => AttachmentPolicy::class,
+        SubmissionAttachment::class => AttachmentPolicy::class,
     ];
 
     /**
      * Register any authentication / authorization services.
-     *
-     * @return void
      */
-    public function boot()
+    public function boot(): void
     {
         $this->registerPolicies();
 
-        // Define role middleware
-        Gate::define('admin', function ($user) {
-            return $user->role === 'admin';
+        // Define gates for specific actions
+        Gate::define('manage-class', function (User $user) {
+            return in_array($user->role, ['admin', 'teacher']);
         });
 
-        Gate::define('teacher', function ($user) {
-            return $user->role === 'teacher';
-        });
-
-        Gate::define('student', function ($user) {
+        Gate::define('submit-task', function (User $user) {
             return $user->role === 'student';
+        });
+
+        Gate::define('grade-submission', function (User $user) {
+            return in_array($user->role, ['admin', 'teacher']);
         });
     }
 }

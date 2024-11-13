@@ -1,70 +1,86 @@
 <?php
 
-use App\Http\Controllers\API\AuthController;
-use App\Http\Controllers\ClassController;
-use App\Http\Controllers\GroupController;
-use App\Http\Controllers\TaskController;
-use App\Http\Controllers\SubmissionController;
-use App\Http\Controllers\AttachmentController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\API\V1\{
+    AuthController,
+    UserController,
+    ClassController,
+    TaskController,
+    TaskGroupController,
+    SubmissionController,
+    TaskAttachmentController,
+    SubmissionAttachmentController
+};
+
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+*/
 
 // Public routes
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
+Route::prefix('v1')->group(function () {
+    // Auth Routes
+    Route::post('login', [AuthController::class, 'login']);
+    Route::post('register', [AuthController::class, 'register']);
+});
 
 // Protected routes
-Route::middleware(['auth:sanctum'])->group(function () {
-    // Auth
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/me', [AuthController::class, 'me']);
+Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+    // Common routes (accessible by all authenticated users)
+    Route::post('logout', [AuthController::class, 'logout']);
+    Route::get('profile', [AuthController::class, 'profile']);
     
-    // Admin routes
-    Route::middleware(['role:admin'])->group(function () {
-        // User Management
-        Route::get('/users', [AuthController::class, 'users']);
-        Route::patch('/users/{user}/toggle-active', [AuthController::class, 'toggleActive']);
+    // Admin Routes
+    Route::prefix('admin')->middleware('role:admin')->group(function () {
+        Route::apiResource('users', UserController::class);
+        Route::apiResource('classes', ClassController::class);
+        Route::get('submissions/stats', [SubmissionController::class, 'adminStats']);
     });
 
-    // Teacher routes
-    Route::middleware(['role:teacher'])->group(function () {
+    // Teacher Routes
+    Route::prefix('teacher')->middleware('role:teacher')->group(function () {
         // Class Management
-        Route::apiResource('classes', ClassController::class);
-        
-        // Group Management
-        Route::apiResource('groups', GroupController::class);
-        Route::post('/groups/{group}/members', [GroupController::class, 'addMember']);
-        Route::delete('/groups/{group}/members/{user}', [GroupController::class, 'removeMember']);
+        Route::apiResource('classes', ClassController::class)->except(['destroy']);
+        Route::post('classes/{class}/students', [ClassController::class, 'addStudent']);
+        Route::delete('classes/{class}/students/{user}', [ClassController::class, 'removeStudent']);
         
         // Task Management
         Route::apiResource('tasks', TaskController::class);
+        Route::get('tasks/{task}/stats', [TaskController::class, 'stats']);
         
-        // View Submissions
-        Route::get('/submissions', [SubmissionController::class, 'index']);
-        Route::get('/submissions/{submission}', [SubmissionController::class, 'show']);
+        // Grading
+        Route::get('submissions', [SubmissionController::class, 'index']);
+        Route::post('submissions/{submission}/grade', [SubmissionController::class, 'grade']);
+        
+        // Attachments
+        Route::post('tasks/{task}/attachments', [TaskAttachmentController::class, 'store']);
+        Route::delete('task-attachments/{attachment}', [TaskAttachmentController::class, 'destroy']);
     });
 
-    // Student routes
-    Route::middleware(['role:student'])->group(function () {
-        // View assigned classes & groups
-        Route::get('/my-classes', [ClassController::class, 'index']);
-        Route::get('/my-groups', [GroupController::class, 'index']);
+    // Student Routes
+    Route::prefix('student')->middleware('role:student')->group(function () {
+        // View Classes & Tasks
+        Route::get('classes', [ClassController::class, 'index']);
+        Route::get('classes/{class}', [ClassController::class, 'show']);
+        Route::get('tasks', [TaskController::class, 'index']);
+        Route::get('tasks/{task}', [TaskController::class, 'show']);
         
-        // View & submit tasks
-        Route::get('/my-tasks', [TaskController::class, 'index']);
-        Route::get('/tasks/{task}', [TaskController::class, 'show']);
+        // Task Groups
+        Route::apiResource('tasks.groups', TaskGroupController::class)->only(['index', 'store', 'show']);
+        Route::post('task-groups/{taskGroup}/join', [TaskGroupController::class, 'join']);
+        Route::post('task-groups/{taskGroup}/leave', [TaskGroupController::class, 'leave']);
         
         // Submissions
-        Route::post('/tasks/{task}/submit', [SubmissionController::class, 'store']);
-        Route::get('/my-submissions', [SubmissionController::class, 'index']);
+        Route::get('submissions/my', [SubmissionController::class, 'mySubmissions']);
+        Route::post('tasks/{task}/submit', [SubmissionController::class, 'store']);
+        Route::get('submissions/{submission}', [SubmissionController::class, 'show']);
+        
+        // Attachments
+        Route::post('submissions/{submission}/attachments', [SubmissionAttachmentController::class, 'store']);
     });
 
-    // Shared routes (accessible by all authenticated users)
-    Route::middleware(['role:admin,teacher,student'])->group(function () {
-        // Attachments
-        Route::post('/attachments', [AttachmentController::class, 'store']);
-        Route::get('/attachments/{attachment}/download', [AttachmentController::class, 'download'])
-            ->middleware('can:view,attachment');
-        Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy'])
-            ->middleware('can:delete,attachment');
-    });
+    // Shared Routes (with role checking in controllers/policies)
+    Route::get('task-attachments/{attachment}/download', [TaskAttachmentController::class, 'download']);
+    Route::get('submission-attachments/{attachment}/download', [SubmissionAttachmentController::class, 'download']);
 });

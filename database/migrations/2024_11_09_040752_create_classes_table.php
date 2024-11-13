@@ -12,15 +12,22 @@ return new class extends Migration
      * @return void
      */
     public function up()
-    {
-        Schema::create('classes', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');                                    // Nama kelas (misal: XII RPL 1)
-            $table->foreignId('teacher_id')->constrained('users');     // Guru pengajar
-            $table->string('description')->nullable();                 // Deskripsi kelas [TAMBAHAN]
-            $table->timestamps();
-        });
-    }
+{
+    Schema::create('classes', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->text('description')->nullable();
+        $table->foreignId('teacher_id')
+              ->constrained('users')
+              ->onDelete('cascade');
+        $table->integer('kkm_score');
+        $table->string('academic_year');
+        $table->enum('semester', ['1', '2']);
+        $table->enum('status', ['active', 'inactive'])->default('active');
+        $table->softDeletes();
+        $table->timestamps();
+    });
+}
 
     /**
      * Reverse the migrations.

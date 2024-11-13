@@ -15,14 +15,25 @@ return new class extends Migration
 {
     Schema::create('submissions', function (Blueprint $table) {
         $table->id();
-        $table->foreignId('task_id')->constrained('tasks');        // Untuk tugas
-        $table->foreignId('group_id')->constrained('groups');      // Dari kelompok
-        $table->text('description')->nullable();                   // Deskripsi jawaban
-        $table->enum('status', ['submitted', 'late'])->default('submitted'); // [TAMBAHAN]
-        $table->timestamp('submitted_at');                         // Waktu submit
+        $table->foreignId('task_id')
+              ->constrained()
+              ->onDelete('cascade');
+        $table->foreignId('user_id')
+              ->constrained()
+              ->onDelete('cascade');
+        $table->foreignId('task_group_id')
+              ->nullable()
+              ->constrained('task_groups')
+              ->onDelete('cascade');
+        $table->text('content')->nullable();
+        $table->decimal('score', 5, 2)->nullable();
+        $table->text('feedback')->nullable();
+        $table->enum('status', ['draft', 'submitted', 'graded'])
+              ->default('draft');
+        $table->timestamp('submitted_at')->nullable();
         $table->timestamps();
-        });
-    }
+    });
+}
 
     /**
      * Reverse the migrations.

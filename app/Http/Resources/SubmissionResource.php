@@ -10,14 +10,19 @@ class SubmissionResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'description' => $this->description,
+            'task_id' => $this->task_id,
+            'user_id' => $this->user_id,
+            'task_group_id' => $this->task_group_id,
+            'content' => $this->content,
+            'score' => $this->score,
+            'feedback' => $this->feedback,
             'status' => $this->status,
             'submitted_at' => $this->submitted_at,
-            'task' => new TaskResource($this->whenLoaded('task')),
-            'group' => new GroupResource($this->whenLoaded('group')),
-            'attachments' => AttachmentResource::collection($this->whenLoaded('attachments')),
+            'user' => new UserResource($this->whenLoaded('user')),
+            'task_group' => new TaskGroupResource($this->whenLoaded('taskGroup')),
+            'attachments' => SubmissionAttachmentResource::collection($this->whenLoaded('attachments')),
             'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            'updated_at' => $this->updated_at
         ];
     }
 }

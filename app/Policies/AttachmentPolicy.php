@@ -2,38 +2,43 @@
 
 namespace App\Policies;
 
-use App\Models\Attachment;
 use App\Models\User;
+use App\Models\TaskAttachment;
+use App\Models\SubmissionAttachment;
 
 class AttachmentPolicy
 {
-    public function view(User $user, Attachment $attachment)
+    public function view(User $user, $attachment): bool
     {
-        if ($user->isAdmin() || $user->isTeacher()) {
-            return true;
+        if ($attachment instanceof TaskAttachment) {
+            return $this->canViewTaskAttachment($user, $attachment);
         }
         
-        $attachable = $attachment->attachable;
-        
-        if ($attachable instanceof Task) {
-            return $attachable->group->students->contains($user->id);
+        if ($attachment instanceof SubmissionAttachment) {
+            return $this->canViewSubmissionAttachment($user, $attachment);
         }
-        
-        if ($attachable instanceof Submission) {
-            return $attachable->group->students->contains($user->id);
-        }
-        
+
         return false;
     }
 
-    public function create(User $user)
+    public function delete(User $user, $attachment): bool
     {
-        return true; // Semua role bisa upload file
+        return $user->role === 'admin' || $attachment->uploaded_by === $user->id;
     }
 
-    public function delete(User $user, Attachment $attachment)
+    private function canViewTaskAttachment(User $user, TaskAttachment $attachment): bool
     {
-        return $user->isAdmin() || 
-               $attachment->uploaded_by_id === $user->id;
+        return $user->role === 'admin' || 
+               $attachment->task->class->teacher_id === $user->id || 
+               $attachment->task->class->users()->where('user_id', $user->id)->exists();
+    }
+
+    private function canViewSubmissionAttachment(User $user, SubmissionAttachment $attachment): bool
+    {
+        return $user->role === 'admin' || 
+               $attachment->submission->task->class->teacher_id === $user->id || 
+               $attachment->submission->user_id === $user->id ||
+               ($attachment->submission->task_group_id && 
+                $attachment->submission->taskGroup->members()->where('user_id', $user->id)->exists());
     }
 }

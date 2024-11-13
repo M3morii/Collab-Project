@@ -19,7 +19,11 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('password');
             $table->enum('role', ['admin', 'teacher', 'student']);
+            $table->string('avatar')->nullable();
+            $table->string('phone')->nullable();
+            $table->text('address')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->softDeletes();  // Untuk deleted_at
             $table->timestamps();
         });
     }
