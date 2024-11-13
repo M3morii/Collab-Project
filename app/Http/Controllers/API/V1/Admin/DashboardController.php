@@ -21,7 +21,7 @@ class DashboardController extends Controller
         $stats = $this->dashboardService->getAdminOverview();
 
         return response()->json([
-            'stats' => $stats
+            'overview' => $stats
         ]);
     }
 } 

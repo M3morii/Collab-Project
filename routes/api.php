@@ -12,7 +12,9 @@ use App\Http\Controllers\API\V1\{
     SubmissionAttachmentController,
     Admin\DashboardController,
     Admin\TeacherController,
-    Admin\StudentController
+    Admin\StudentController,
+    Admin\UserManagementController,
+    Admin\ClassManagementController
 };
 
 /*
@@ -90,7 +92,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
 // Admin Routes
 Route::prefix('v1/admin')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
-    // Dashboard
+    // Dashboard Overview
     Route::get('dashboard/overview', [DashboardController::class, 'overview']);
     
     // Teacher Management
@@ -100,6 +102,16 @@ Route::prefix('v1/admin')->middleware(['auth:sanctum', 'role:admin'])->group(fun
     // Student Management
     Route::apiResource('students', StudentController::class)->except(['store', 'destroy']);
     Route::get('students/{student}/stats', [StudentController::class, 'studentStats']);
+
+    // User Management
+    Route::get('users', [UserManagementController::class, 'index']);
+    Route::get('teachers', [UserManagementController::class, 'listTeachers']);
+    Route::post('teachers', [UserManagementController::class, 'createTeacher']);
+    Route::patch('users/{user}/status', [UserManagementController::class, 'updateStatus']);
+
+    // Class Management
+    Route::post('classes', [ClassManagementController::class, 'store']);
+    Route::post('classes/{class}/assign-teacher', [ClassManagementController::class, 'assignTeacher']);
 });
 
 // Public registration (student only)
