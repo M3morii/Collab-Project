@@ -80,13 +80,17 @@
             try {
                 const formData = new FormData(this);
                 
-                const response = await fetch('/login', {
+                const response = await fetch('/api/v1/login', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Accept': 'application/json'
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
                     },
-                    body: formData
+                    body: JSON.stringify({
+                        email: formData.get('email'),
+                        password: formData.get('password')
+                    })
                 });
 
                 const data = await response.json();
@@ -95,7 +99,15 @@
                     throw data;
                 }
 
-                window.location.href = data.redirect_to;
+                localStorage.setItem('token', data.token);
+                
+                if (data.user.role === 'admin') {
+                    window.location.href = '/admin/dashboard';
+                } else if (data.user.role === 'teacher') {
+                    window.location.href = '/teacher/dashboard';
+                } else {
+                    window.location.href = '/student/dashboard';
+                }
 
             } catch (error) {
                 errorList.innerHTML = '';
@@ -115,7 +127,6 @@
                     errorList.appendChild(li);
                 }
             } finally {
-                // Reset submit button
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'Masuk';
             }
