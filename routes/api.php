@@ -11,7 +11,8 @@ use App\Http\Controllers\API\V1\{
     SubmissionAttachmentController,
     Admin\DashboardController,
     Admin\UserManagementController,
-    Admin\ClassManagementController
+    Admin\ClassManagementController,
+    Teacher\TeacherDashboardController
 };
 
 /*
@@ -100,6 +101,23 @@ Route::prefix('v1/admin')->middleware(['auth:sanctum', 'role:admin'])->group(fun
     Route::get('submissions/stats', [SubmissionController::class, 'adminStats']);
     Route::get('users/teachers/{teacher}/stats', [UserManagementController::class, 'teacherStats']);
     Route::get('users/students/{student}/stats', [UserManagementController::class, 'studentStats']);
+});
+
+// Teacher Routes
+Route::prefix('v1/teacher')->middleware(['auth:sanctum', 'role:teacher'])->group(function () {
+    // Dashboard & Classes
+    Route::get('classes', [TeacherDashboardController::class, 'getAssignedClasses']);
+    
+    // Tasks
+    Route::get('classes/{class}/tasks', [TaskController::class, 'index']);
+    Route::post('classes/{class}/tasks', [TaskController::class, 'store']);
+    Route::get('classes/{class}/tasks/{task}', [TaskController::class, 'show']);
+    Route::put('classes/{class}/tasks/{task}', [TaskController::class, 'update']);
+    Route::delete('classes/{class}/tasks/{task}', [TaskController::class, 'destroy']);
+    
+    // Task Groups
+    Route::get('classes/{class}/tasks/{task}/groups', [TaskGroupController::class, 'index']);
+    Route::post('classes/{class}/tasks/{task}/groups', [TaskGroupController::class, 'store']);
 });
 
 // Public registration (student only)

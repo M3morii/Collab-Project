@@ -26,18 +26,44 @@ class SubmissionAttachmentController extends Controller
             'attachments.*' => 'required|file|max:10240' // max 10MB
         ]);
 
-        $attachments = [];
-        foreach ($request->file('attachments') as $file) {
-            $attachments[] = $submission->attachments()->create([
-                'file_name' => $file->getClientOriginalName(),
-                'file_path' => $this->fileService->upload($file, 'submissions'),
-                'file_type' => $file->getClientMimeType(),
-                'file_size' => $file->getSize(),
-                'uploaded_by' => auth()->id()
-            ]);
-        }
+        try {
+            // Validasi semua file
+            if (!$this->fileService->validateMultipleFiles(
+                $request->file('attachments'),
+                ['application/pdf', 'application/msword', 'image/jpeg', 'image/png'],
+                10240
+            )) {
+                return response()->json([
+                    'message' => 'Invalid file type or size'
+                ], 422);
+            }
 
-        return SubmissionAttachmentResource::collection(collect($attachments));
+            $attachments = [];
+            foreach ($request->file('attachments') as $file) {
+                $fileInfo = $this->fileService->uploadWithValidation(
+                    $file,
+                    'submissions',
+                    ['application/pdf', 'application/msword', 'image/jpeg', 'image/png'],
+                    10240
+                );
+
+                $attachments[] = $submission->attachments()->create([
+                    'file_name' => $fileInfo['file_name'],
+                    'file_path' => $fileInfo['file_path'],
+                    'file_type' => $fileInfo['file_type'],
+                    'file_size' => $fileInfo['file_size'],
+                    'uploaded_by' => auth()->id()
+                ]);
+            }
+
+            return SubmissionAttachmentResource::collection(collect($attachments));
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to upload attachments',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function destroy(SubmissionAttachment $attachment)

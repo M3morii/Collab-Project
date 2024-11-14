@@ -10,11 +10,8 @@ class TaskGroupResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'task_id' => $this->task_id,
             'name' => $this->name,
-            'description' => $this->description,
-            'max_members' => $this->max_members,
-            'created_by' => new UserResource($this->whenLoaded('creator')),
+            'task_id' => $this->task_id,
             'members' => UserResource::collection($this->whenLoaded('members')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at

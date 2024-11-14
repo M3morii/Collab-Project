@@ -10,18 +10,15 @@ class TaskResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'class_id' => $this->class_id,
             'title' => $this->title,
             'description' => $this->description,
-            'start_date' => $this->start_date,
-            'deadline' => $this->deadline,
-            'task_type' => $this->task_type,
-            'max_score' => $this->max_score,
-            'weight_percentage' => $this->weight_percentage,
-            'status' => $this->status,
-            'created_by' => new UserResource($this->whenLoaded('creator')),
-            'task_groups' => TaskGroupResource::collection($this->whenLoaded('taskGroups')),
-            'attachments' => TaskAttachmentResource::collection($this->whenLoaded('attachments')),
+            'class_id' => $this->class_id,
+            'type' => $this->type,
+            'max_members' => $this->max_members,
+            'due_date' => $this->due_date,
+            'attachment_path' => $this->attachment_path,
+            'submissions' => SubmissionResource::collection($this->whenLoaded('submissions')),
+            'groups' => TaskGroupResource::collection($this->whenLoaded('groups')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at
         ];
