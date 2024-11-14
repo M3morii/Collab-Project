@@ -3,61 +3,88 @@
 namespace App\Http\Controllers\API\V1\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\TeacherRequest;
-use App\Http\Resources\UserResource;
 use App\Models\User;
-use App\Services\UserManagementService;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Http\Resources\UserResource;
 
 class UserManagementController extends Controller
 {
-    protected $userManagementService;
-
-    public function __construct(UserManagementService $userManagementService)
+    public function index(Request $request)
     {
-        $this->middleware('role:admin');
-        $this->userManagementService = $userManagementService;
+        $users = User::when($request->role, function($query, $role) {
+            return $query->where('role', $role);
+        })->paginate(10);
+
+        return UserResource::collection($users);
     }
 
-    // List semua users dengan filter
-    public function index(Request $request): JsonResponse
+    public function store(Request $request)
     {
-        $users = $this->userManagementService->getAllUsers($request->all());
-        return response()->json([
-            'users' => UserResource::collection($users)
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|min:8',
+            'role' => 'required|in:teacher,student'
         ]);
-    }
 
-    // List teachers
-    public function listTeachers(): JsonResponse
-    {
-        $teachers = $this->userManagementService->getTeachers();
-        return response()->json([
-            'teachers' => UserResource::collection($teachers)
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => bcrypt($validated['password']),
+            'role' => $validated['role']
         ]);
+
+        return new UserResource($user);
     }
 
-    // Create teacher
-    public function createTeacher(TeacherRequest $request): JsonResponse
+    public function show($id)
     {
-        $teacher = $this->userManagementService->createTeacher($request->validated());
-        return response()->json([
-            'message' => 'Teacher created successfully',
-            'teacher' => new UserResource($teacher)
-        ], 201);
+        $user = User::findOrFail($id);
+        return new UserResource($user);
     }
 
-    // Update user status (active/inactive)
-    public function updateStatus(User $user, Request $request): JsonResponse
+    public function update(Request $request, $id)
     {
-        $request->validate(['is_active' => 'required|boolean']);
+        $user = User::findOrFail($id);
         
-        $user = $this->userManagementService->updateUserStatus($user, $request->is_active);
-        
-        return response()->json([
-            'message' => 'User status updated successfully',
-            'user' => new UserResource($user)
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|unique:users,email,'.$id,
+            'role' => 'sometimes|in:teacher,student'
         ]);
+
+        $user->update($validated);
+        return new UserResource($user);
+    }
+
+    public function destroy($id)
+    {
+        $user = User::findOrFail($id);
+        $user->delete();
+        
+        return response()->json(['message' => 'User deleted successfully']);
+    }
+
+    public function updateStatus(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:active,inactive'
+        ]);
+
+        $user->update(['status' => $validated['status']]);
+        return new UserResource($user);
+    }
+
+    // Helper methods untuk filter
+    public function getTeachers()
+    {
+        $teachers = User::where('role', 'teacher')->paginate(10);
+        return UserResource::collection($teachers);
+    }
+
+    public function getStudents()
+    {
+        $students = User::where('role', 'student')->paginate(10);
+        return UserResource::collection($students);
     }
 } 
