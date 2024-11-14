@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\TaskController;
 use App\Models\Task;
+use App\Http\Controllers\Web\ClassController;
 
 /*
 |--------------------------------------------------------------------------
@@ -42,6 +43,10 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     })->name('admin.dashboard');
     
     Route::resource('tasks', TaskController::class);
+    Route::get('/admin/classes', [ClassController::class, 'index'])->name('admin.classes.index');
+    Route::post('/admin/classes', [ClassController::class, 'store'])->name('admin.classes.store');
+    Route::put('/admin/classes/{class}', [ClassController::class, 'update'])->name('admin.classes.update');
+    Route::delete('/admin/classes/{class}', [ClassController::class, 'destroy'])->name('admin.classes.destroy');
 });
 
 // User routes
