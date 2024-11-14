@@ -3,7 +3,6 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\V1\{
     AuthController,
-    UserController,
     ClassController,
     TaskController,
     TaskGroupController,
@@ -11,8 +10,8 @@ use App\Http\Controllers\API\V1\{
     TaskAttachmentController,
     SubmissionAttachmentController,
     Admin\DashboardController,
-    Admin\TeacherController,
-    Admin\StudentController
+    Admin\UserManagementController,
+    Admin\ClassManagementController
 };
 
 /*
@@ -33,13 +32,6 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Common routes (accessible by all authenticated users)
     Route::post('logout', [AuthController::class, 'logout']);
     Route::get('profile', [AuthController::class, 'profile']);
-    
-    // Admin Routes
-    Route::prefix('admin')->middleware('role:admin')->group(function () {
-        Route::apiResource('users', UserController::class);
-        Route::apiResource('classes', ClassController::class);
-        Route::get('submissions/stats', [SubmissionController::class, 'adminStats']);
-    });
 
     // Teacher Routes
     Route::prefix('teacher')->middleware('role:teacher')->group(function () {
@@ -90,16 +82,24 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
 // Admin Routes
 Route::prefix('v1/admin')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
-    // Dashboard
+    // Dashboard Overview
     Route::get('dashboard/overview', [DashboardController::class, 'overview']);
     
-    // Teacher Management
-    Route::apiResource('teachers', TeacherController::class);
-    Route::get('teachers/{teacher}/stats', [TeacherController::class, 'teacherStats']);
+    // User Management
+    Route::apiResource('users', UserManagementController::class);
+    Route::patch('users/{user}/status', [UserManagementController::class, 'updateStatus']);
+    Route::get('users/teachers', [UserManagementController::class, 'getTeachers']);
+    Route::get('users/students', [UserManagementController::class, 'getStudents']);
     
-    // Student Management
-    Route::apiResource('students', StudentController::class)->except(['store', 'destroy']);
-    Route::get('students/{student}/stats', [StudentController::class, 'studentStats']);
+    // Class Management
+    Route::apiResource('classes', ClassManagementController::class);
+    Route::post('classes/{class}/assign-teacher', [ClassManagementController::class, 'assignTeacher']);
+    Route::post('classes/{class}/assign-students', [ClassManagementController::class, 'assignStudents']);
+    
+    // Statistics & Reports
+    Route::get('submissions/stats', [SubmissionController::class, 'adminStats']);
+    Route::get('users/teachers/{teacher}/stats', [UserManagementController::class, 'teacherStats']);
+    Route::get('users/students/{student}/stats', [UserManagementController::class, 'studentStats']);
 });
 
 // Public registration (student only)

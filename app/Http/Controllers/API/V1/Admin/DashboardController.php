@@ -3,25 +3,22 @@
 namespace App\Http\Controllers\API\V1\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Services\DashboardService;
-use Illuminate\Http\JsonResponse;
+use App\Models\User;
+use App\Models\ClassRoom;
 
 class DashboardController extends Controller
 {
-    protected $dashboardService;
-
-    public function __construct(DashboardService $dashboardService)
+    public function overview()
     {
-        $this->middleware('role:admin');
-        $this->dashboardService = $dashboardService;
-    }
-
-    public function overview(): JsonResponse
-    {
-        $stats = $this->dashboardService->getAdminOverview();
+        $totalUsers = User::count();
+        $totalActiveClasses = ClassRoom::where('status', 'active')->count();
 
         return response()->json([
-            'stats' => $stats
+            'message' => 'Dashboard overview retrieved successfully',
+            'data' => [
+                'total_users' => $totalUsers,
+                'total_active_classes' => $totalActiveClasses
+            ]
         ]);
     }
 } 

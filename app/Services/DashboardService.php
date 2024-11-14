@@ -16,13 +16,42 @@ class DashboardService
                 'students' => User::where('role', 'student')->count(),
             ],
             'total_active_classes' => Classes::where('status', 'active')->count(),
-            'recent_activities' => $this->getRecentActivities()
+            'latest_users' => $this->getLatestUsers(),
+            'latest_classes' => $this->getLatestClasses()
         ];
     }
 
-    private function getRecentActivities(): array
+    private function getLatestUsers(): array
     {
-        // Implementasi recent activities
-        return [];
+        return User::latest()
+            ->take(5)
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'role' => $user->role,
+                    'created_at' => $user->created_at
+                ];
+            })
+            ->toArray();
+    }
+
+    private function getLatestClasses(): array
+    {
+        return Classes::with('teacher')
+            ->where('status', 'active')
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(function ($class) {
+                return [
+                    'id' => $class->id,
+                    'name' => $class->name,
+                    'teacher_name' => $class->teacher->name,
+                    'created_at' => $class->created_at
+                ];
+            })
+            ->toArray();
     }
 } 
