@@ -12,8 +12,14 @@ class ClassManagementController extends Controller
 {
     public function index()
     {
-        $classes = ClassRoom::with(['teacher', 'students'])->paginate(10);
-        return ClassResource::collection($classes);
+        $classes = ClassRoom::with(['teacher', 'students'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        return response()->json([
+            'message' => 'Classes retrieved successfully',
+            'data' => ClassResource::collection($classes)
+        ]);
     }
 
     public function store(Request $request)
