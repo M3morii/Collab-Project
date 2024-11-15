@@ -3,7 +3,7 @@
 namespace App\Policies;
 
 use App\Models\User;
-use App\Models\Classes;
+use App\Models\ClassRoom;
 
 class ClassPolicy
 {
@@ -12,7 +12,7 @@ class ClassPolicy
         return true; // Semua user bisa lihat daftar kelas
     }
 
-    public function view(User $user, Classes $class): bool
+    public function view(User $user, ClassRoom $class): bool
     {
         return $user->role === 'admin' || 
                $class->teacher_id === $user->id || 
@@ -24,17 +24,17 @@ class ClassPolicy
         return in_array($user->role, ['admin', 'teacher']);
     }
 
-    public function update(User $user, Classes $class): bool
+    public function update(User $user, ClassRoom $class): bool
     {
         return $user->role === 'admin' || $class->teacher_id === $user->id;
     }
 
-    public function delete(User $user, Classes $class): bool
+    public function delete(User $user, ClassRoom $class): bool
     {
         return $user->role === 'admin';
     }
 
-    public function manageStudents(User $user, Classes $class): bool
+    public function manageStudents(User $user, ClassRoom $class): bool
     {
         return $user->role === 'admin' || $class->teacher_id === $user->id;
     }

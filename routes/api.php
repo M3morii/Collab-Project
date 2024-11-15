@@ -4,7 +4,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\V1\{
     AuthController,
     ClassController,
-    TaskController,
     TaskGroupController,
     SubmissionController,
     TaskAttachmentController,
@@ -12,7 +11,8 @@ use App\Http\Controllers\API\V1\{
     Admin\DashboardController,
     Admin\UserManagementController,
     Admin\ClassManagementController,
-    Teacher\TeacherDashboardController
+    Teacher\TeacherDashboardController,
+    Teacher\TaskController
 };
 
 /*
@@ -33,26 +33,6 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Common routes (accessible by all authenticated users)
     Route::post('logout', [AuthController::class, 'logout']);
     Route::get('profile', [AuthController::class, 'profile']);
-
-    // Teacher Routes
-    Route::prefix('teacher')->middleware('role:teacher')->group(function () {
-        // Class Management
-        Route::apiResource('classes', ClassController::class)->except(['destroy']);
-        Route::post('classes/{class}/students', [ClassController::class, 'addStudent']);
-        Route::delete('classes/{class}/students/{user}', [ClassController::class, 'removeStudent']);
-        
-        // Task Management
-        Route::apiResource('tasks', TaskController::class);
-        Route::get('tasks/{task}/stats', [TaskController::class, 'stats']);
-        
-        // Grading
-        Route::get('submissions', [SubmissionController::class, 'index']);
-        Route::post('submissions/{submission}/grade', [SubmissionController::class, 'grade']);
-        
-        // Attachments
-        Route::post('tasks/{task}/attachments', [TaskAttachmentController::class, 'store']);
-        Route::delete('task-attachments/{attachment}', [TaskAttachmentController::class, 'destroy']);
-    });
 
     // Student Routes
     Route::prefix('student')->middleware('role:student')->group(function () {
@@ -93,31 +73,44 @@ Route::prefix('v1/admin')->middleware(['auth:sanctum', 'role:admin'])->group(fun
     Route::get('users/students', [UserManagementController::class, 'getStudents']);
     
     // Class Management
-    Route::apiResource('classes', ClassManagementController::class);
-    Route::post('classes/{class}/assign-teacher', [ClassManagementController::class, 'assignTeacher']);
-    Route::post('classes/{class}/assign-students', [ClassManagementController::class, 'assignStudents']);
+    Route::get('classes', [ClassManagementController::class, 'index']);
+    Route::post('classes', [ClassManagementController::class, 'store']);
+    Route::get('classes/{classId}', [ClassManagementController::class, 'show']);
+    Route::put('classes/{classId}', [ClassManagementController::class, 'update']);
+    Route::delete('classes/{classId}', [ClassManagementController::class, 'destroy']);
+    Route::post('classes/{classId}/assign-teacher', [ClassManagementController::class, 'assignTeacher']);
+    Route::post('classes/{classId}/assign-students', [ClassManagementController::class, 'assignStudents']);
+    Route::delete('classes/{classId}/teacher', [ClassManagementController::class, 'removeTeacher']);
+    Route::post('classes/{classId}/students/remove', [ClassManagementController::class, 'removeStudents']);
     
     // Statistics & Reports
     Route::get('submissions/stats', [SubmissionController::class, 'adminStats']);
-    Route::get('users/teachers/{teacher}/stats', [UserManagementController::class, 'teacherStats']);
-    Route::get('users/students/{student}/stats', [UserManagementController::class, 'studentStats']);
 });
 
 // Teacher Routes
 Route::prefix('v1/teacher')->middleware(['auth:sanctum', 'role:teacher'])->group(function () {
-    // Dashboard & Classes
+    // Classes
     Route::get('classes', [TeacherDashboardController::class, 'getAssignedClasses']);
     
     // Tasks
-    Route::get('classes/{class}/tasks', [TaskController::class, 'index']);
-    Route::post('classes/{class}/tasks', [TaskController::class, 'store']);
-    Route::get('classes/{class}/tasks/{task}', [TaskController::class, 'show']);
-    Route::put('classes/{class}/tasks/{task}', [TaskController::class, 'update']);
-    Route::delete('classes/{class}/tasks/{task}', [TaskController::class, 'destroy']);
+    Route::get('classes/{classId}/tasks', [TaskController::class, 'index']);
+    Route::post('classes/{classId}/tasks', [TaskController::class, 'store']);
+    Route::get('classes/{classId}/tasks/{taskId}', [TaskController::class, 'show']);
+    Route::put('classes/{classId}/tasks/{taskId}', [TaskController::class, 'update']);
+    Route::delete('classes/{classId}/tasks/{taskId}', [TaskController::class, 'destroy']);
     
     // Task Groups
-    Route::get('classes/{class}/tasks/{task}/groups', [TaskGroupController::class, 'index']);
-    Route::post('classes/{class}/tasks/{task}/groups', [TaskGroupController::class, 'store']);
+    Route::get('classes/{classId}/tasks/{taskId}/groups', [TaskGroupController::class, 'index']);
+    Route::post('classes/{classId}/tasks/{taskId}/groups', [TaskGroupController::class, 'store']);
+    
+    // Task Attachments
+    Route::get('classes/{classId}/tasks/{taskId}/attachments', [TaskAttachmentController::class, 'index']);
+    Route::post('classes/{classId}/tasks/{taskId}/attachments', [TaskAttachmentController::class, 'store']);
+    Route::delete('classes/{classId}/tasks/{taskId}/attachments/{attachmentId}', [TaskAttachmentController::class, 'destroy']);
+    
+    // Submissions & Grading
+    Route::get('submissions', [SubmissionController::class, 'index']);
+    Route::post('submissions/{submission}/grade', [SubmissionController::class, 'grade']);
 });
 
 // Public registration (student only)

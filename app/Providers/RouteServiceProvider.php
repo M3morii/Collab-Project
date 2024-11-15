@@ -7,6 +7,8 @@ use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvi
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
+use App\Models\ClassRoom;
+use App\Models\Task;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -35,7 +37,10 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        Route::model('Task', \App\Models\Task::class);
+        parent::boot();
+
+        Route::model('class', ClassRoom::class);
+        Route::model('task', Task::class);
 
         $this->configureRateLimiting();
 
