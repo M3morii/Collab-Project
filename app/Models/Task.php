@@ -3,17 +3,22 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model
 {
-    use HasFactory, SoftDeletes;
+    use SoftDeletes;
 
     protected $fillable = [
-        'class_id', 'title', 'description',
-        'start_date', 'deadline', 'task_type',
-        'max_score', 'weight_percentage', 'status',
+        'class_id',
+        'title',
+        'description',
+        'start_date',
+        'deadline',
+        'task_type',
+        'max_score',
+        'weight_percentage',
+        'status',
         'created_by'
     ];
 
@@ -24,15 +29,10 @@ class Task extends Model
 
     public function class()
     {
-        return $this->belongsTo(Classes::class);
+        return $this->belongsTo(Classes::class, 'class_id');
     }
 
-    public function creator()
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-
-    public function taskGroups()
+    public function groups()
     {
         return $this->hasMany(TaskGroup::class);
     }
@@ -42,8 +42,13 @@ class Task extends Model
         return $this->hasMany(Submission::class);
     }
 
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
     public function attachments()
     {
-        return $this->hasMany(TaskAttachment::class);
+        return $this->hasMany('App\Models\TaskAttachment');
     }
 }

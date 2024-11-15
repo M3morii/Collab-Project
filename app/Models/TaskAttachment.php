@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TaskAttachment extends Model
 {
@@ -11,9 +12,18 @@ class TaskAttachment extends Model
 
     protected $fillable = [
         'task_id',
-        'uploaded_by_id',
-        'filename',
-        'file_path'
+        'file_name',
+        'file_path',
+        'file_type',
+        'file_size',
+        'uploaded_by'
+    ];
+
+    protected $casts = [
+        'file_size' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime'
     ];
 
     public function task()
@@ -23,6 +33,6 @@ class TaskAttachment extends Model
 
     public function uploader()
     {
-        return $this->belongsTo(User::class, 'uploaded_by_id');
+        return $this->belongsTo(User::class, 'uploaded_by');
     }
 }

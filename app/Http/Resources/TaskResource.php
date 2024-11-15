@@ -13,14 +13,10 @@ class TaskResource extends JsonResource
             'title' => $this->title,
             'description' => $this->description,
             'class_id' => $this->class_id,
-            'type' => $this->type,
-            'max_members' => $this->max_members,
-            'due_date' => $this->due_date,
-            'attachment_path' => $this->attachment_path,
+            'task_type' => $this->task_type,
+            'deadline' => $this->deadline,
             'submissions' => SubmissionResource::collection($this->whenLoaded('submissions')),
             'groups' => TaskGroupResource::collection($this->whenLoaded('groups')),
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at
         ];
     }
 }

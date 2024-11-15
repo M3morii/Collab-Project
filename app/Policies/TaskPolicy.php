@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\User;
 use App\Models\Task;
+use App\Models\Classes;
 
 class TaskPolicy
 {
@@ -32,8 +33,36 @@ class TaskPolicy
 
     public function delete(User $user, Task $task): bool
     {
-        return $user->role === 'admin' || 
-               $task->class->teacher_id === $user->id;
+        $class = Classes::find($task->class_id);
+        
+        \Log::info('Task Delete Policy Check:', [
+            'user_id' => $user->id,
+            'user_role' => $user->role,
+            'task_id' => $task->id,
+            'class_id' => $task->class_id,
+            'created_by' => $task->created_by,
+            'class_exists' => $class ? true : false,
+            'class_teacher_id' => $class ? $class->teacher_id : null,
+            'is_teacher' => $user->role === 'teacher',
+            'is_task_creator' => $task->created_by === $user->id,
+            'is_class_teacher' => $class ? $class->teacher_id === $user->id : false
+        ]);
+
+        // Teacher dapat menghapus task jika:
+        // 1. Dia yang membuat task ATAU
+        // 2. Dia adalah guru di kelas tersebut
+        if ($user->role === 'teacher') {
+            $isAuthorized = $task->created_by === $user->id || 
+                           ($class && $class->teacher_id === $user->id);
+            
+            \Log::info('Teacher authorization result:', ['isAuthorized' => $isAuthorized]);
+            return $isAuthorized;
+        }
+
+        // Admin bisa menghapus semua task
+        $isAdmin = $user->role === 'admin';
+        \Log::info('Admin authorization result:', ['isAdmin' => $isAdmin]);
+        return $isAdmin;
     }
 
     public function submit(User $user, Task $task): bool
