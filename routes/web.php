@@ -18,7 +18,7 @@ use App\Http\Controllers\Web\ClassController;
 */
 
 // Guest routes
-Route::middleware('guest')->group(function () {
+
     Route::get('/', function () {
         return redirect()->route('login');
     });
@@ -31,9 +31,9 @@ Route::middleware('guest')->group(function () {
         return view('auth.register');
     })->name('register');
 
-    Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/register', [AuthController::class, 'register']);
-});
+    Route::post('login', [AuthController::class, 'login']);
+    Route::post('register', [AuthController::class, 'register']);
+
 
 // Admin routes
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {

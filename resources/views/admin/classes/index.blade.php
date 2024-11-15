@@ -316,20 +316,102 @@
         </div>
     </div>
 
+    <!-- Tambahkan modal untuk assign guru dan siswa -->
+    <div class="modal fade" id="assignModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="assignModalTitle">Assign Guru & Siswa</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="assignForm">
+                        @csrf
+                        <div class="mb-3">
+                            <label class="form-label">Guru</label>
+                            <select class="form-select" id="teacherSelect">
+                                <option value="">Pilih Guru</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Siswa</label>
+                            <select class="form-select" id="studentSelect" multiple>
+                                <!-- Options akan diisi melalui JavaScript -->
+                            </select>
+                            <small class="text-muted">Tahan Ctrl/Cmd untuk memilih beberapa siswa</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Simpan</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        const token = localStorage.getItem('token');
-        
-        if (!token) {
-            alert('Token tidak ditemukan. Silakan login kembali.');
-            window.location.href = '/login';
+        // Fungsi untuk mendapatkan token
+        function getToken() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login';
+                return null;
+            }
+            return token;
         }
 
-        // Fungsi untuk handle submit form
+        // Fungsi untuk mengambil data kelas
+        async function fetchClasses() {
+            const spinner = document.querySelector('.loading-spinner');
+            spinner.style.display = 'block';
+            
+            const token = getToken();
+            if (!token) return;
+
+            try {
+                const response = await fetch('/api/v1/admin/classes', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    displayClasses(result.data);
+                    updateStatistics(result.data);
+                } else if (response.status === 401) {
+                    // Token tidak valid
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Oops...',
+                        text: 'Gagal mengambil data kelas'
+                    });
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Terjadi kesalahan saat mengambil data'
+                });
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+
+        // Update fungsi submit form untuk menggunakan token yang sama
         document.getElementById('classForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
+            const token = getToken();
+            if (!token) return;
+
             const classId = this.dataset.classId;
             const data = {
                 name: document.getElementById('className').value,
@@ -341,7 +423,6 @@
             };
 
             try {
-                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
                 const url = classId 
                     ? `/api/v1/admin/classes/${classId}`
                     : '/api/v1/admin/classes';
@@ -352,7 +433,7 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`,
                         'Accept': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                     },
                     body: JSON.stringify(data)
                 });
@@ -362,7 +443,6 @@
                     const modal = bootstrap.Modal.getInstance(document.getElementById('classModal'));
                     modal.hide();
                     
-                    // Tampilkan SweetAlert untuk sukses
                     Swal.fire({
                         icon: 'success',
                         title: 'Berhasil!',
@@ -372,9 +452,11 @@
                     });
                     
                     fetchClasses();
+                } else if (response.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
                 } else {
                     const errorData = await response.json();
-                    // Tampilkan SweetAlert untuk error
                     Swal.fire({
                         icon: 'error',
                         title: 'Oops...',
@@ -391,33 +473,6 @@
             }
         });
 
-        // Fungsi untuk mengambil data kelas
-        async function fetchClasses() {
-            const spinner = document.querySelector('.loading-spinner');
-            spinner.style.display = 'block';
-
-            try {
-                const response = await fetch('/api/v1/admin/classes', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    displayClasses(result.data);
-                    updateStatistics(result.data);
-                } else {
-                    console.error('Gagal mengambil data kelas');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-            } finally {
-                spinner.style.display = 'none';
-            }
-        }
-
         // Fungsi untuk menampilkan data ke tabel
         function displayClasses(classes) {
             const tableBody = document.getElementById('classTableBody');
@@ -429,7 +484,7 @@
                 const semester = kelas.semester ?? '-';
                 
                 tableBody.innerHTML += `
-                    <tr>
+                    <tr class="animate__animated animate__fadeIn">
                         <td>${index + 1}</td>
                         <td>${kelas.name}</td>
                         <td>${kelas.description}</td>
@@ -448,14 +503,20 @@
                             <button class="btn btn-sm btn-info" onclick="detailClass(${kelas.id})">
                                 <i class="bi bi-eye"></i>
                             </button>
+                            <button class="btn btn-sm btn-primary" onclick="showAssignModal(${kelas.id})">
+                                <i class="bi bi-people"></i>
+                            </button>
                         </td>
                     </tr>
                 `;
             });
         }
 
-        // Fungsi untuk menghapus kelas
+        // Fungsi untuk melihat detail kelas
         async function detailClass(id) {
+            const token = getToken();
+            if (!token) return;
+
             try {
                 const response = await fetch(`/api/v1/admin/classes/${id}`, {
                     headers: {
@@ -467,39 +528,32 @@
                 if (response.ok) {
                     const result = await response.json();
                     const data = result.data;
+                    
+                    // Format daftar siswa
+                    const studentsList = data.students && data.students.length > 0
+                        ? data.students.map(student => `<li>${student.name}</li>`).join('')
+                        : '<li>Belum ada siswa</li>';
 
-                    // Tampilkan detail menggunakan SweetAlert2
                     Swal.fire({
-                        title: 'Detail Kelas',
+                        title: data.name,
                         html: `
                             <div class="text-start">
-                                <p><strong>Nama Kelas:</strong> ${data.name}</p>
                                 <p><strong>Deskripsi:</strong> ${data.description}</p>
                                 <p><strong>KKM:</strong> ${data.kkm_score}</p>
                                 <p><strong>Tahun Akademik:</strong> ${data.academic_year}</p>
                                 <p><strong>Semester:</strong> ${data.semester}</p>
-                                <p><strong>Status:</strong> 
-                                    <span class="badge bg-${data.status === 'active' ? 'success' : 'danger'}">
-                                        ${data.status}
-                                    </span>
-                                </p>
-                                <p><strong>Dibuat pada:</strong> ${new Date(data.created_at).toLocaleDateString('id-ID')}</p>
-                                <p><strong>Diperbarui pada:</strong> ${new Date(data.updated_at).toLocaleDateString('id-ID')}</p>
+                                <p><strong>Status:</strong> ${data.status}</p>
+                                <p><strong>Guru:</strong> ${data.teacher ? data.teacher.name : 'Belum ditentukan'}</p>
+                                <p><strong>Daftar Siswa:</strong></p>
+                                <ul class="text-start">
+                                    ${studentsList}
+                                </ul>
                             </div>
                         `,
-                        width: '600px',
-                        confirmButtonText: 'Tutup',
-                        customClass: {
-                            htmlContainer: 'text-left'
-                        }
+                        width: '600px'
                     });
                 } else {
-                    const errorData = await response.json();
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Oops...',
-                        text: errorData.message || 'Terjadi kesalahan saat mengambil detail kelas'
-                    });
+                    throw new Error('Gagal mengambil detail kelas');
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -512,50 +566,81 @@
         }
 
         // Fungsi untuk edit kelas
-        function editClass(id) {
-            fetch(`/api/v1/admin/classes/${id}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/json'
+        async function editClass(id) {
+            const token = getToken();
+            if (!token) return;
+
+            try {
+                const response = await fetch(`/api/v1/admin/classes/${id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const data = result.data;
+                    
+                    // Isi form dengan data yang ada
+                    document.getElementById('className').value = data.name;
+                    document.getElementById('classDescription').value = data.description;
+                    document.getElementById('classKkm').value = data.kkm_score;
+                    document.getElementById('classYear').value = data.academic_year;
+                    document.getElementById('classSemester').value = data.semester;
+                    document.getElementById('classStatus').value = data.status;
+
+                    // Simpan ID kelas yang sedang diedit
+                    document.getElementById('classForm').dataset.classId = id;
+
+                    // Ubah judul modal
+                    document.getElementById('classModalTitle').textContent = 'Edit Kelas';
+
+                    // Tampilkan modal
+                    const modal = new bootstrap.Modal(document.getElementById('classModal'));
+                    modal.show();
+                } else if (response.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                } else {
+                    throw new Error('Gagal mengambil data kelas');
                 }
-            })
-            .then(response => response.json())
-            .then(result => {
-                const data = result.data; // Sesuaikan dengan struktur response
-                
-                // Isi form dengan data yang ada
-                document.getElementById('className').value = data.name;
-                document.getElementById('classDescription').value = data.description;
-                document.getElementById('classKkm').value = data.kkm_score;
-                document.getElementById('classYear').value = data.academic_year;
-                document.getElementById('classSemester').value = data.semester;
-                document.getElementById('classStatus').value = data.status;
-
-                // Simpan ID kelas yang sedang diedit
-                document.getElementById('classForm').dataset.classId = id;
-
-                // Ubah judul modal
-                document.getElementById('classModalTitle').textContent = 'Edit Kelas';
-
-                // Tampilkan modal
-                const modal = new bootstrap.Modal(document.getElementById('classModal'));
-                modal.show();
-            })
-            .catch(error => {
+            } catch (error) {
                 console.error('Error:', error);
-                alert('Terjadi kesalahan saat mengambil data kelas');
-            });
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Terjadi kesalahan saat mengambil data kelas'
+                });
+            }
         }
 
         // Tambahkan event listener untuk reset form saat modal ditutup
         document.getElementById('classModal').addEventListener('hidden.bs.modal', function () {
             document.getElementById('classForm').reset();
-            delete document.getElementById('classForm').dataset.classId;
+            document.getElementById('classForm').dataset.classId;
             document.getElementById('classModalTitle').textContent = 'Tambah Kelas';
         });
 
         // Load data kelas saat halaman dimuat
         document.addEventListener('DOMContentLoaded', function() {
+            // Inisialisasi event listener untuk modal
+            const classModal = document.getElementById('classModal');
+            if (classModal) {
+                classModal.addEventListener('hidden.bs.modal', function () {
+                    const classForm = document.getElementById('classForm');
+                    if (classForm) {
+                        classForm.reset();
+                        delete classForm.dataset.classId;
+                    }
+                    const classModalTitle = document.getElementById('classModalTitle');
+                    if (classModalTitle) {
+                        classModalTitle.textContent = 'Tambah Kelas';
+                    }
+                });
+            }
+
+            // Panggil fetchClasses
             fetchClasses();
 
             // Animasi untuk cards statistik
@@ -603,6 +688,152 @@
             setTimeout(() => {
                 window.location.href = this.getAttribute('href');
             }, 500);
+        });
+
+        // Fungsi untuk menampilkan modal assign
+        async function showAssignModal(classId) {
+            const token = getToken();
+            if (!token) return;
+
+            try {
+                // Ambil data guru
+                const teacherResponse = await fetch('/api/v1/admin/users?role=teacher', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                // Ambil data siswa
+                const studentResponse = await fetch('/api/v1/admin/users?role=student', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                // Ambil data kelas
+                const classResponse = await fetch(`/api/v1/admin/classes/${classId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!teacherResponse.ok || !studentResponse.ok || !classResponse.ok) {
+                    throw new Error('Gagal mengambil data');
+                }
+
+                const teachers = await teacherResponse.json();
+                const students = await studentResponse.json();
+                const classData = await classResponse.json();
+
+                // Isi select guru
+                const teacherSelect = document.getElementById('teacherSelect');
+                teacherSelect.innerHTML = '<option value="">Pilih Guru</option>';
+                teachers.data.forEach(teacher => {
+                    const option = document.createElement('option');
+                    option.value = teacher.id;
+                    option.textContent = teacher.name;
+                    if (classData.data.teacher_id === teacher.id) {
+                        option.selected = true;
+                    }
+                    teacherSelect.appendChild(option);
+                });
+
+                // Isi select siswa
+                const studentSelect = document.getElementById('studentSelect');
+                studentSelect.innerHTML = '';
+                students.data.forEach(student => {
+                    const option = document.createElement('option');
+                    option.value = student.id;
+                    option.textContent = student.name;
+                    if (classData.data.students.some(s => s.id === student.id)) {
+                        option.selected = true;
+                    }
+                    studentSelect.appendChild(option);
+                });
+
+                // Simpan class ID ke form
+                document.getElementById('assignForm').dataset.classId = classId;
+
+                // Tampilkan modal
+                const modal = new bootstrap.Modal(document.getElementById('assignModal'));
+                modal.show();
+
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Terjadi kesalahan saat mengambil data'
+                });
+            }
+        }
+
+        // Event listener untuk form assign
+        document.getElementById('assignForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const token = getToken();
+            if (!token) return;
+
+            const classId = this.dataset.classId;
+            const teacherId = document.getElementById('teacherSelect').value;
+            const selectedStudents = Array.from(document.getElementById('studentSelect').selectedOptions)
+                .map(option => option.value);
+
+            try {
+                // Assign guru
+                if (teacherId) {
+                    await fetch(`/api/v1/admin/classes/${classId}/assign-teacher`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({ teacher_id: teacherId })
+                    });
+                }
+
+                // Assign siswa
+                if (selectedStudents.length > 0) {
+                    await fetch(`/api/v1/admin/classes/${classId}/assign-students`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({ student_ids: selectedStudents })
+                    });
+                }
+
+                // Tutup modal dan refresh data
+                const modal = bootstrap.Modal.getInstance(document.getElementById('assignModal'));
+                modal.hide();
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: 'Guru dan siswa berhasil ditambahkan ke kelas',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+                
+                fetchClasses();
+
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Terjadi kesalahan saat menyimpan data'
+                });
+            }
         });
     </script>
 </body>
