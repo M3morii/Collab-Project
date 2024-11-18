@@ -7,6 +7,7 @@
     <title>Login</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 </head>
 <body class="bg-light">
     <div class="min-vh-100 d-flex align-items-center justify-content-center">
@@ -67,69 +68,69 @@
         });
 
         // Login Form Submit
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+        $('#loginForm').on('submit', function(e) {
             e.preventDefault();
             
-            const submitBtn = document.getElementById('submitBtn');
-            const errorMessages = document.getElementById('error-messages');
-            const errorList = errorMessages.querySelector('ul');
+            const submitBtn = $('#submitBtn');
+            const errorMessages = $('#error-messages');
+            const errorList = errorMessages.find('ul');
             
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
+            // Disable button dan tampilkan loading
+            submitBtn.prop('disabled', true)
+                    .html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...');
 
-            try {
-                const formData = new FormData(this);
-                
-                const response = await fetch('/api/v1/login', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        email: formData.get('email'),
-                        password: formData.get('password')
-                    })
-                });
+            // Reset error messages
+            errorList.empty();
+            errorMessages.addClass('d-none');
 
-                const data = await response.json();
+            $.ajax({
+                url: '/api/v1/login',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    email: $('#email').val(),
+                    password: $('#password').val()
+                },
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                    'Accept': 'application/json'
+                },
+                success: function(data) {
+                    // Simpan token di localStorage dan cookies
+                    localStorage.setItem('token', data.token);
+                    document.cookie = `auth_token=${data.token}; path=/`;
+                    
+                    // Redirect berdasarkan role dengan delay sedikit
+                    setTimeout(() => {
+                        if (data.user.role === 'admin') {
+                            window.location.replace('/admin/dashboard');
+                        } else if (data.user.role === 'teacher') {
+                            window.location.replace('/teacher/dashboard');
+                        } else {
+                            window.location.replace('/student/dashboard');
+                        }
+                    }, 100);
+                },
+                error: function(xhr) {
+                    errorMessages.removeClass('d-none');
+                    errorList.empty();
 
-                if (!response.ok) {
-                    throw data;
-                }
-
-                localStorage.setItem('token', data.token);
-                
-                if (data.user.role === 'admin') {
-                    window.location.href = '/admin/dashboard';
-                } else if (data.user.role === 'teacher') {
-                    window.location.href = '/teacher/dashboard';
-                } else {
-                    window.location.href = '/student/dashboard';
-                }
-
-            } catch (error) {
-                errorList.innerHTML = '';
-                errorMessages.classList.remove('d-none');
-
-                if (error.errors) {
-                    Object.values(error.errors).forEach(messages => {
-                        messages.forEach(message => {
-                            const li = document.createElement('li');
-                            li.textContent = message;
-                            errorList.appendChild(li);
+                    if (xhr.responseJSON.errors) {
+                        Object.values(xhr.responseJSON.errors).forEach(messages => {
+                            messages.forEach(message => {
+                                errorList.append(`<li>${message}</li>`);
+                            });
                         });
-                    });
-                } else if (error.message) {
-                    const li = document.createElement('li');
-                    li.textContent = error.message;
-                    errorList.appendChild(li);
+                    } else if (xhr.responseJSON.message) {
+                        errorList.append(`<li>${xhr.responseJSON.message}</li>`);
+                    }
+                },
+                complete: function() {
+                    // Reset button state
+                    submitBtn.prop('disabled', false)
+                            .html('Masuk');
                 }
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Masuk';
-            }
+            });
         });
     </script>
 </body>

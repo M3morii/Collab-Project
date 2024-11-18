@@ -8,6 +8,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-bootstrap-4/bootstrap-4.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         :root {
             --primary-color: #4e73df;
@@ -393,7 +395,6 @@
                                     <th>Name</th>
                                     <th>Email</th>
                                     <th>Role</th>
-                                    <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -575,6 +576,7 @@
             document.getElementById('overviewSection').classList.add('d-none');
             document.getElementById('usersSection').classList.remove('d-none');
             document.getElementById('classesSection').classList.add('d-none');
+            loadUsers(); // Load users saat section ditampilkan
         }
 
         // Inisialisasi active state saat halaman dimuat
@@ -586,6 +588,278 @@
                 showOverview(); // Default ke Overview
             }
         });
+
+        // Tambahkan fungsi ini
+        function showAddUserModal() {
+            const modal = new bootstrap.Modal(document.getElementById('userModal'));
+            modal.show();
+        }
+
+        // Modifikasi fungsi handleUserSubmit
+        function handleUserSubmit(event) {
+            event.preventDefault();
+            
+            const userId = event.target.dataset.userId;
+            const isEdit = !!userId;
+            
+            const formData = {
+                name: document.getElementById('userName').value,
+                email: document.getElementById('userEmail').value,
+                role: document.getElementById('userRole').value
+            };
+
+            // Tambahkan password hanya jika creating new user
+            if (!isEdit) {
+                formData.password = document.getElementById('userPassword').value;
+            }
+
+            const url = isEdit ? `/api/v1/admin/users/${userId}` : '/api/v1/admin/users';
+            const method = isEdit ? 'PUT' : 'POST';
+
+            // Tampilkan loading
+            Swal.fire({
+                title: 'Mohon tunggu...',
+                text: isEdit ? 'Sedang mengupdate user' : 'Sedang menambahkan user',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error('Gagal ' + (isEdit ? 'mengupdate' : 'menambahkan') + ' user');
+            })
+            .then(data => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('userModal'));
+                modal.hide();
+                
+                // Tampilkan notifikasi sukses
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: isEdit ? 'User berhasil diupdate' : 'User baru berhasil ditambahkan',
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+
+                document.getElementById('userForm').reset();
+                document.getElementById('userForm').dataset.userId = '';
+                loadUsers();
+                fetchActiveClasses();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                
+                // Tampilkan notifikasi error
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: error.message,
+                    confirmButtonText: 'Tutup'
+                });
+            });
+        }
+
+        // Tambahkan event listener untuk form user
+        document.getElementById('userForm').addEventListener('submit', handleUserSubmit);
+
+        // Tambahkan fungsi untuk load users
+        async function loadUsers(role = '', page = 1) {
+            try {
+                const response = await fetch(`/api/v1/admin/users?role=${role}&page=${page}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!response.ok) throw new Error('Gagal mengambil data users');
+
+                const result = await response.json();
+                const tbody = document.querySelector('#usersTable tbody');
+                tbody.innerHTML = '';
+
+                result.data.forEach(user => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${user.name}</td>
+                            <td>${user.email}</td>
+                            <td><span class="badge bg-${user.role === 'teacher' ? 'primary' : 'info'}">${user.role}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-warning me-1" onclick="editUser(${user.id})">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                // Tambahkan pagination yang sudah disederhanakan
+                if (result.meta) {
+                    addPagination(result.meta);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Gagal memuat data users');
+            }
+        }
+
+        // Fungsi untuk menambahkan pagination yang lebih sederhana
+        function addPagination(meta) {
+            const paginationContainer = document.createElement('div');
+            paginationContainer.className = 'mt-3 d-flex justify-content-between align-items-center';
+            
+            paginationContainer.innerHTML = `
+                <div class="text-muted">
+                    Halaman ${meta.current_page} dari ${meta.last_page}
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-outline-primary btn-sm ${meta.current_page === 1 ? 'disabled' : ''}" 
+                            onclick="loadUsersPage(${meta.current_page - 1})" 
+                            ${meta.current_page === 1 ? 'disabled' : ''}>
+                        <i class="bi bi-chevron-left"></i> Sebelumnya
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm ${meta.current_page === meta.last_page ? 'disabled' : ''}" 
+                            onclick="loadUsersPage(${meta.current_page + 1})"
+                            ${meta.current_page === meta.last_page ? 'disabled' : ''}>
+                        Selanjutnya <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+            `;
+
+            // Hapus pagination yang ada sebelumnya (jika ada)
+            const existingPagination = document.querySelector('.pagination-container');
+            if (existingPagination) {
+                existingPagination.remove();
+            }
+
+            paginationContainer.classList.add('pagination-container');
+            document.querySelector('#usersTable').parentNode.appendChild(paginationContainer);
+        }
+
+        // Fungsi untuk load halaman tertentu (tetap sama)
+        function loadUsersPage(page) {
+            const roleFilter = document.getElementById('roleFilter').value;
+            loadUsers(roleFilter, page);
+        }
+
+        // Modifikasi fungsi editUser untuk implementasi edit
+        function editUser(userId) {
+            fetch(`/api/v1/admin/users/${userId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Isi form dengan data user
+                document.getElementById('userName').value = data.data.name;
+                document.getElementById('userEmail').value = data.data.email;
+                document.getElementById('userRole').value = data.data.role;
+                
+                // Tambahkan ID user ke form untuk keperluan update
+                document.getElementById('userForm').dataset.userId = userId;
+                
+                // Ubah judul modal dan text tombol
+                document.querySelector('#userModal .modal-title').textContent = 'Edit User';
+                document.querySelector('#userModal button[type="submit"]').textContent = 'Update';
+                
+                // Tampilkan modal
+                const modal = new bootstrap.Modal(document.getElementById('userModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Gagal mengambil data user');
+            });
+        }
+
+        // Tambahkan event listener untuk filter role
+        document.getElementById('roleFilter').addEventListener('change', function(e) {
+            loadUsers(e.target.value);
+        });
+
+        // Modifikasi fungsi deleteUser juga untuk menggunakan SweetAlert
+        function deleteUser(userId) {
+            Swal.fire({
+                title: 'Apakah Anda yakin?',
+                text: "User yang dihapus tidak dapat dikembalikan!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, hapus!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Tampilkan loading
+                    Swal.fire({
+                        title: 'Mohon tunggu...',
+                        text: 'Sedang menghapus user',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    fetch(`/api/v1/admin/users/${userId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            // Tampilkan notifikasi sukses
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil!',
+                                text: 'User berhasil dihapus',
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+                            
+                            loadUsers();
+                            fetchActiveClasses();
+                        } else {
+                            throw new Error('Gagal menghapus user');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        
+                        // Tampilkan notifikasi error
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Oops...',
+                            text: error.message,
+                            confirmButtonText: 'Tutup'
+                        });
+                    });
+                }
+            });
+        }
     </script>
 </body>
 </html> 
