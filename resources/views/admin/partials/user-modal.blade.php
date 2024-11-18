@@ -16,9 +16,14 @@
                         <label for="userEmail" class="form-label">Email</label>
                         <input type="email" class="form-control" id="userEmail" required>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3 position-relative">
                         <label for="userPassword" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="userPassword" required>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="userPassword" name="password">
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="userRole" class="form-label">Role</label>

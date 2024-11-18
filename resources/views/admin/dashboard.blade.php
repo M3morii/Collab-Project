@@ -466,6 +466,8 @@
 
             const formData = {
                 name: document.getElementById('className').value,
+                teacher_id: document.getElementById('teacherId').value,
+                student_ids: selectedStudents,
                 description: document.getElementById('classDescription').value,
                 kkm_score: parseInt(document.getElementById('classKkm').value),
                 academic_year: document.getElementById('classYear').value,
@@ -698,7 +700,7 @@
                         <tr>
                             <td>${user.name}</td>
                             <td>${user.email}</td>
-                            <td><span class="badge bg-${user.role === 'teacher' ? 'primary' : 'info'}">${user.role}</span></td>
+                            <td><span class="badge bg-${user.role === 'admin' ? 'success' : user.role === 'teacher' ? 'primary' : 'info'}">${user.role}</span></td>
                             <td>
                                 <button class="btn btn-sm btn-warning me-1" onclick="editUser(${user.id})">
                                     <i class="bi bi-pencil"></i>
@@ -860,6 +862,92 @@
                 }
             });
         }
+
+        // Fungsi untuk toggle password visibility
+        const togglePassword = document.querySelector('#togglePassword');
+        const passwordInput = document.querySelector('#userPassword');
+
+        togglePassword.addEventListener('click', function () {
+            // Toggle tipe input
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            // Toggle icon
+            this.querySelector('i').classList.toggle('bi-eye');
+            this.querySelector('i').classList.toggle('bi-eye-slash');
+        });
+
+        // Reset password visibility saat modal ditutup
+        document.getElementById('userModal').addEventListener('hidden.bs.modal', function () {
+            passwordInput.setAttribute('type', 'password');
+            togglePassword.querySelector('i').classList.remove('bi-eye-slash');
+            togglePassword.querySelector('i').classList.add('bi-eye');
+        });
+
+        // Fungsi untuk memuat data guru dan murid saat modal dibuka
+        async function loadTeachersAndStudents() {
+            try {
+                // Ambil data guru
+                const teacherResponse = await fetch('/api/v1/admin/users?role=teacher', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                });
+                const teacherData = await teacherResponse.json();
+                
+                // Ambil data murid - pastikan hanya role student
+                const studentResponse = await fetch('/api/v1/admin/users?role=student&exclude_teachers=true', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                });
+                const studentData = await studentResponse.json();
+
+                // Isi dropdown guru
+                const teacherSelect = document.getElementById('teacherId');
+                teacherSelect.innerHTML = '<option value="">Pilih Guru</option>';
+                teacherData.data.forEach(teacher => {
+                    teacherSelect.innerHTML += `
+                        <option value="${teacher.id}">${teacher.name}</option>
+                    `;
+                });
+
+                // Isi daftar murid - tambahkan pengecekan role
+                const studentsList = document.getElementById('studentsList');
+                studentsList.innerHTML = '';
+                studentData.data.forEach(student => {
+                    if (student.role === 'student') { // Tambahan pengecekan
+                        studentsList.innerHTML += `
+                            <div class="form-check mb-2">
+                                <input class="form-check-input student-checkbox" type="checkbox" 
+                                       value="${student.id}" id="student${student.id}">
+                                <label class="form-check-label" for="student${student.id}">
+                                    ${student.name}
+                                </label>
+                            </div>
+                        `;
+                    }
+                });
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Gagal memuat data guru dan murid');
+            }
+        }
+
+        // Event listener untuk checkbox "Pilih Semua"
+        document.getElementById('selectAllStudents').addEventListener('change', function(e) {
+            const checkboxes = document.querySelectorAll('.student-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = e.target.checked;
+            });
+        });
+
+        // Event listener saat modal kelas dibuka
+        document.getElementById('classModal').addEventListener('show.bs.modal', function () {
+            loadTeachersAndStudents();
+        });
     </script>
 </body>
 </html> 
