@@ -27,12 +27,10 @@ php artisan key:generate
 
 # Sesuaikan konfigurasi database dan setting lainnya di .env
 
-
 4. Setup aplikasi
+php artisan storage:link
 php artisan db:seed
 php artisan migrate
-php artisan storage:link
-
 
 ## Maintenance
 
