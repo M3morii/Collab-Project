@@ -41,25 +41,8 @@ use App\Http\Controllers\Web\ClassController;
         return view('admin.dashboard', compact('tasks'));
     })->name('admin.dashboard');
     
-    Route::resource('tasks', TaskController::class);
     Route::get('/admin/classes', [ClassController::class, 'index'])->name('admin.classes.index');
     Route::post('/admin/classes', [ClassController::class, 'store'])->name('admin.classes.store');
     Route::put('/admin/classes/{class}', [ClassController::class, 'update'])->name('admin.classes.update');
     Route::delete('/admin/classes/{class}', [ClassController::class, 'destroy'])->name('admin.classes.destroy');
 
-
-// User routes
-Route::middleware(['auth:sanctum', 'role:student'])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('user.dashboard');
-    })->name('dashboard');
-    
-    Route::get('/tasks/assigned', [TaskController::class, 'assignedTasks'])
-        ->name('tasks.assigned');
-    Route::post('/tasks/{task}/submit', [TaskController::class, 'submitTask'])
-        ->name('tasks.submit');
-});
-
-Route::post('/logout', [AuthController::class, 'logout'])
-    ->middleware('auth:sanctum')
-    ->name('logout');

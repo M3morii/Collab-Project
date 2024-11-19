@@ -5,7 +5,6 @@ namespace App\Http\Controllers\API\V1\Teacher;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ClassResource;
 use App\Models\Classes;
-use App\Models\User;
 use Illuminate\Http\JsonResponse;
 
 class ClassController extends Controller

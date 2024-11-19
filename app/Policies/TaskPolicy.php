@@ -5,9 +5,12 @@ namespace App\Policies;
 use App\Models\User;
 use App\Models\Task;
 use App\Models\Classes;
+use Illuminate\Auth\Access\HandlesAuthorization;
 
 class TaskPolicy
 {
+    use HandlesAuthorization;
+
     public function viewAny(User $user): bool
     {
         return true; // Semua user bisa lihat daftar tugas
@@ -70,5 +73,12 @@ class TaskPolicy
         return $user->role === 'student' && 
                $task->class->users()->where('user_id', $user->id)->exists() &&
                $task->status === 'published';
+    }
+
+    public function viewSubmissions(User $user, Task $task)
+    {
+        // Guru bisa melihat submission jika task tersebut ada di kelas yang dia ajar
+        return $user->role === 'teacher' &&
+               $task->class->teacher_id === $user->id;
     }
 }
