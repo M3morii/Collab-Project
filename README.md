@@ -32,7 +32,8 @@ php artisan key:generate
 
 4. Setup aplikasi
 php artisan migrate
-php artisan storage:link
+php artisan stora[Uploading ERD 3 Roles dan DFD Final.drawio…]()
+ge:link
 
 
 ## Maintenance
@@ -47,3 +48,11 @@ php artisan storage:link
 - Jika terjadi error permission: periksa folder storage dan bootstrap/cache
 - Jika ada masalah cache: coba clear semua cache
 - Jika ada error database: periksa konfigurasi di .env
+
+# Tabel ERD
+
+![ERD 3 Roles](https://github.com/user-attachments/assets/88dddaa9-a71e-460a-99b6-89b1aae0c962)
+
+# Tabel DFD
+
+![DFD 3 Roles](https://github.com/user-attachments/assets/415a3915-0403-4785-b499-b0dc89b5b389)
