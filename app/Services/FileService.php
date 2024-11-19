@@ -107,4 +107,12 @@ class FileService
 
         return true;
     }
+
+    public function deleteFile($path)
+    {
+        if (Storage::exists($path)) {
+            return Storage::delete($path);
+        }
+        return false;
+    }
 }

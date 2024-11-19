@@ -7,11 +7,13 @@ use App\Models\TaskGroup;
 use App\Models\Task;
 use Illuminate\Http\Request;
 use App\Http\Resources\TaskGroupResource;
-
 class TaskGroupController extends Controller
 {
     public function index($classId, $taskId)
     {
+        $task = Task::where('class_id', $classId)
+                    ->findOrFail($taskId);
+
         $groups = TaskGroup::with('members')
             ->where('task_id', $taskId)
             ->get();
@@ -21,38 +23,32 @@ class TaskGroupController extends Controller
 
     public function store(Request $request, $classId, $taskId)
     {
-        $validated = $request->validate([
+        $request->validate([
             'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'max_members' => 'required|integer|min:2',
             'member_ids' => 'required|array',
             'member_ids.*' => 'exists:users,id'
         ]);
 
-        $task = Task::findOrFail($taskId);
-        
-        // Validate member count
-        if (count($validated['member_ids']) > $task->max_members) {
+        // Validasi jumlah anggota
+        if (count($request->member_ids) > $request->max_members) {
             return response()->json([
                 'message' => 'Number of members exceeds maximum allowed'
             ], 422);
         }
 
-        try {
-            $group = TaskGroup::create([
-                'name' => $validated['name'],
-                'task_id' => $taskId
-            ]);
+        $taskGroup = TaskGroup::create([
+            'task_id' => $taskId,
+            'name' => $request->name,
+            'description' => $request->description,
+            'max_members' => $request->max_members,
+            'created_by' => auth()->id()
+        ]);
 
-            $group->members()->attach($validated['member_ids']);
+        // Attach members
+        $taskGroup->members()->attach($request->member_ids);
 
-            return response()->json([
-                'message' => 'Group created successfully',
-                'data' => new TaskGroupResource($group->load('members'))
-            ], 201);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to create group',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return new TaskGroupResource($taskGroup);
     }
 }
