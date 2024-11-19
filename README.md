@@ -22,14 +22,16 @@ cd <nama_folder>
 composer install
 
 3. Setup environment
-cp .env.example .env
-# Sesuaikan konfigurasi database dan setting lainnya di .env
+Setting.env
 php artisan key:generate
 
+# Sesuaikan konfigurasi database dan setting lainnya di .env
+
+
 4. Setup aplikasi
+php artisan db:seed
 php artisan migrate
-php artisan stora[Uploading ERD 3 Roles dan DFD Final.drawio…]()
-ge:link
+php artisan storage:link
 
 
 ## Maintenance
