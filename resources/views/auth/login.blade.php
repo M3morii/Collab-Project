@@ -102,6 +102,7 @@
                 localStorage.setItem('token', data.token);
                 
                 if (data.user.role === 'admin') {
+                    alert("test")
                     window.location.href = '/admin/dashboard';
                 } else if (data.user.role === 'teacher') {
                     window.location.href = '/teacher/dashboard';

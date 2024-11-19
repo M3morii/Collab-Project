@@ -15,8 +15,10 @@ class Submission extends Model
         'submitted_at'
     ];
 
-    protected $casts = [
-        'submitted_at' => 'datetime'
+    protected $dates = [
+        'submitted_at',
+        'created_at',
+        'updated_at'
     ];
 
     public function task()

@@ -4,13 +4,13 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\V1\{
     AuthController,
     ClassController,
-    TaskGroupController,
-    SubmissionController,
     TaskAttachmentController,
     SubmissionAttachmentController,
+    Teacher\SubmissionController,
     Admin\DashboardController,
     Admin\UserManagementController,
     Admin\ClassManagementController,
+    Teacher\TaskGroupController,
     Teacher\TeacherDashboardController,
     Teacher\TaskController
 };
@@ -42,10 +42,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('tasks', [TaskController::class, 'index']);
         Route::get('tasks/{task}', [TaskController::class, 'show']);
         
-        // Task Groups
-        Route::apiResource('tasks.groups', TaskGroupController::class)->only(['index', 'store', 'show']);
-        Route::post('task-groups/{taskGroup}/join', [TaskGroupController::class, 'join']);
-        Route::post('task-groups/{taskGroup}/leave', [TaskGroupController::class, 'leave']);
+        // Task Groups - hanya bisa melihat
+        Route::get('tasks/{task}/groups', [TaskGroupController::class, 'index']);
+        Route::get('tasks/{task}/groups/{group}', [TaskGroupController::class, 'show']);
         
         // Submissions
         Route::get('submissions/my', [SubmissionController::class, 'mySubmissions']);
@@ -82,6 +81,7 @@ Route::prefix('v1/admin')->middleware(['auth:sanctum', 'role:admin'])->group(fun
     Route::post('classes/{classId}/assign-students', [ClassManagementController::class, 'assignStudents']);
     Route::delete('classes/{classId}/teacher', [ClassManagementController::class, 'removeTeacher']);
     Route::post('classes/{classId}/students/remove', [ClassManagementController::class, 'removeStudents']);
+    Route::get('classes/{classId}/available-students', [ClassManagementController::class, 'getAvailableStudents']);
     
     // Statistics & Reports
     Route::get('submissions/stats', [SubmissionController::class, 'adminStats']);
@@ -110,8 +110,9 @@ Route::prefix('v1/teacher')->middleware(['auth:sanctum', 'role:teacher'])->group
     
     // Submissions & Grading
     Route::get('submissions', [SubmissionController::class, 'index']);
+    Route::get('submissions/{submission}', [SubmissionController::class, 'show']);
     Route::post('submissions/{submission}/grade', [SubmissionController::class, 'grade']);
+    Route::get('tasks/{task}/submissions', [SubmissionController::class, 'taskSubmissions']);
 });
-
 // Public registration (student only)
 Route::post('v1/register', [AuthController::class, 'register']);
