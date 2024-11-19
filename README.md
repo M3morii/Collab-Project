@@ -5,11 +5,7 @@ Collab Project adalah Web pembelajaran yang memiliki 3 Role yaitu Admin, Teacher
 ## Prasyarat
 
 - PHP >= 8.1.10
-- BCMath PHP Extension
-- Ctype PHP Extension
-- Fileinfo PHP Extension
 - JSON PHP Extension
-- PDO PHP Extension
 - Tokenizer PHP Extension
 - XML PHP Extension
 - Composer versi 2+
