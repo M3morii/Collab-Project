@@ -44,6 +44,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('tasks', [StudentTaskController::class, 'index']);
         Route::get('tasks/{taskId}', [StudentTaskController::class, 'show']);
         Route::get('classes/{classId}/tasks', [StudentTaskController::class, 'getTasksByClass']);
+        Route::get('tasks/{taskId}/detail', [StudentTaskController::class, 'getTaskDetail']);
+        Route::get('tasks/{taskId}/attachments/{attachmentId}/download', [StudentTaskController::class, 'downloadAttachment'])
+            ->name('student.task.download-attachment');
     });
 
 // Admin Routes
