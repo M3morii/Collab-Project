@@ -2,12 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\Classes;
+use App\Models\ClassRoom;
 use App\Models\User;
 
 class ClassManagementService
 {
-    public function createClass(array $data): Classes
+    public function createClass(array $data): ClassRoom
     {
         // Verify teacher exists and is active
         $teacher = User::findOrFail($data['teacher_id']);
@@ -15,10 +15,10 @@ class ClassManagementService
             throw new \Exception('Invalid or inactive teacher');
         }
 
-        return Classes::create($data);
+        return ClassRoom::create($data);
     }
 
-    public function assignTeacher(Classes $class, int $teacherId): Classes
+    public function assignTeacher(ClassRoom $class, int $teacherId): ClassRoom
     {
         // Verify teacher
         $teacher = User::findOrFail($teacherId);

@@ -29,10 +29,10 @@ class Task extends Model
 
     public function class()
     {
-        return $this->belongsTo(Classes::class, 'class_id');
+        return $this->belongsTo(ClassRoom::class, 'class_id');
     }
 
-    public function groups()
+    public function taskGroup()
     {
         return $this->hasMany(TaskGroup::class);
     }
@@ -51,4 +51,5 @@ class Task extends Model
     {
         return $this->hasMany('App\Models\TaskAttachment');
     }
+    
 }

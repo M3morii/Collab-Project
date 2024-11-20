@@ -4,8 +4,7 @@ namespace App\Http\Controllers\API\V1\Teacher;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ClassResource;
-use App\Models\Classes;
-use App\Models\User;
+use App\Models\ClassRoom;
 use Illuminate\Http\JsonResponse;
 
 class ClassController extends Controller
@@ -14,7 +13,7 @@ class ClassController extends Controller
     {
         $teacher = auth()->user();
         
-        $classes = Classes::where('teacher_id', $teacher->id)
+        $classes =ClassRoom::where('teacher_id', $teacher->id)
                          ->with(['teacher', 'users'])
                          ->get();
 

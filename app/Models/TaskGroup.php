@@ -14,7 +14,8 @@ class TaskGroup extends Model
         'name', 
         'description',
         'max_members',
-        'created_by'
+        'created_by',
+        'class_id'
     ];
 
     // Relasi yang benar
@@ -32,5 +33,11 @@ class TaskGroup extends Model
     {
         return $this->belongsToMany(User::class, 'task_group_members')
                     ->withTimestamps();
+    }
+
+    // Tambahkan relasi class
+    public function class()
+    {
+        return $this->belongsTo(ClassRoom::class, 'class_id');
     }
 }

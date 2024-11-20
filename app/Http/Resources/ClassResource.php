@@ -12,7 +12,6 @@ class ClassResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'description' => $this->description,
-            'teacher_id' => $this->teacher_id,
             'kkm_score' => $this->kkm_score,
             'academic_year' => $this->academic_year,
             'semester' => $this->semester,
@@ -20,7 +19,7 @@ class ClassResource extends JsonResource
             'teacher' => new UserResource($this->whenLoaded('teacher')),
             'students' => UserResource::collection($this->whenLoaded('students')),
             'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at
+            'updated_at' => $this->updated_at,
         ];
     }
 }

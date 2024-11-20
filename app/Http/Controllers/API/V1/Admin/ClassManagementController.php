@@ -13,8 +13,14 @@ class ClassManagementController extends Controller
 {
     public function index()
     {
-        $classes = ClassRoom::with(['teacher', 'students'])->paginate(10);
-        return ClassResource::collection($classes);
+        $classes = ClassRoom::with(['teacher', 'students'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        return response()->json([
+            'message' => 'Classes retrieved successfully',
+            'data' => ClassResource::collection($classes)
+        ]);
     }
 
     public function store(Request $request)
@@ -40,7 +46,6 @@ class ClassManagementController extends Controller
                 'teacher_id' => 'required|exists:users,id'
             ]);
 
-            // Cari class berdasarkan ID
             $class = ClassRoom::findOrFail($classId);
 
             // Cari dan validasi teacher
@@ -58,10 +63,10 @@ class ClassManagementController extends Controller
                 ], 422);
             }
 
-            // Update teacher_id di tabel classes
+            // Update teacher_id
             $class->update(['teacher_id' => $teacher->id]);
 
-            // Attach teacher ke class_users
+            // Tambahkan ke class_users juga
             $class->students()->attach($teacher->id, [
                 'role' => 'teacher',
                 'status' => 'active'
@@ -88,34 +93,36 @@ class ClassManagementController extends Controller
                 'student_ids.*' => 'exists:users,id'
             ]);
 
-            // Cari class berdasarkan ID
             $class = ClassRoom::findOrFail($classId);
 
+            // Dapatkan ID siswa yang sudah terdaftar di kelas ini
+            $existingStudentIds = $class->students()
+                ->where('class_users.role', 'student')
+                ->pluck('users.id')
+                ->toArray();
+
+            // Filter out siswa yang sudah terdaftar
+            $newStudentIds = array_diff($validated['student_ids'], $existingStudentIds);
+
+            if (empty($newStudentIds)) {
+                return response()->json([
+                    'message' => 'All selected students are already assigned to this class',
+                    'existing_student_ids' => $existingStudentIds
+                ], 422);
+            }
+
             // Validasi bahwa semua ID adalah student yang valid
-            $students = User::whereIn('id', $validated['student_ids'])
-                           ->where('users.role', 'student')
+            $students = User::whereIn('id', $newStudentIds)
+                           ->where('role', 'student')
                            ->get();
 
-            if ($students->count() !== count($validated['student_ids'])) {
+            if ($students->count() !== count($newStudentIds)) {
                 return response()->json([
                     'message' => 'Some of the provided IDs are not valid students'
                 ], 422);
             }
 
-            // Cek apakah ada student yang sudah terdaftar di kelas
-            $existingStudents = $class->students()
-                                     ->where('class_users.role', 'student')
-                                     ->whereIn('class_users.user_id', $validated['student_ids'])
-                                     ->pluck('class_users.user_id');
-
-            if ($existingStudents->isNotEmpty()) {
-                return response()->json([
-                    'message' => 'Some students are already assigned to this class',
-                    'existing_student_ids' => $existingStudents
-                ], 422);
-            }
-
-            // Attach students ke class
+            // Attach hanya siswa baru
             foreach ($students as $student) {
                 $class->students()->attach($student->id, [
                     'role' => 'student',
@@ -125,7 +132,9 @@ class ClassManagementController extends Controller
 
             return response()->json([
                 'message' => 'Students assigned successfully',
-                'data' => new ClassResource($class->fresh(['students']))
+                'data' => new ClassResource($class->fresh(['students'])),
+                'assigned_students' => $students->pluck('id'),
+                'already_in_class' => $existingStudentIds
             ]);
 
         } catch (\Exception $e) {
@@ -158,14 +167,6 @@ class ClassManagementController extends Controller
             ], 404);
         }
     }
-
-    /**
-     * Update the specified class.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function update(Request $request, $id)
     {
         try {
@@ -228,11 +229,8 @@ class ClassManagementController extends Controller
                     'message' => 'Class does not have a teacher assigned'
                 ], 422);
             }
-
-            // Hapus teacher dari class_users
-            $class->students()->where('role', 'teacher')->detach();
             
-            // Set teacher_id menjadi null di tabel classes
+            // Cukup set teacher_id menjadi null di tabel classes
             $class->update(['teacher_id' => null]);
 
             return response()->json([
@@ -267,6 +265,35 @@ class ClassManagementController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Failed to remove students',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getAvailableStudents($classId)
+    {
+        try {
+            $class = ClassRoom::findOrFail($classId);
+
+            // Dapatkan ID siswa yang sudah terdaftar
+            $existingStudentIds = $class->students()
+                ->where('class_users.role', 'student')
+                ->pluck('users.id');
+
+            // Dapatkan siswa yang belum terdaftar
+            $availableStudents = User::where('role', 'student')
+                ->whereNotIn('id', $existingStudentIds)
+                ->select('id', 'name', 'email') // sesuaikan field yang dibutuhkan
+                ->get();
+
+            return response()->json([
+                'message' => 'Available students retrieved successfully',
+                'data' => $availableStudents
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to get available students',
                 'error' => $e->getMessage()
             ], 500);
         }

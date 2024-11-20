@@ -4,15 +4,17 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\V1\{
     AuthController,
     ClassController,
-    TaskGroupController,
-    SubmissionController,
     TaskAttachmentController,
     SubmissionAttachmentController,
+    Teacher\SubmissionController,
     Admin\DashboardController,
     Admin\UserManagementController,
     Admin\ClassManagementController,
+    Teacher\TaskGroupController,
     Teacher\TeacherDashboardController,
-    Teacher\TaskController
+    Teacher\TaskController,
+    Student\StudentTaskController,
+    Student\StudentDashboardController
 };
 
 /*
@@ -33,33 +35,19 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Common routes (accessible by all authenticated users)
     Route::post('logout', [AuthController::class, 'logout']);
     Route::get('profile', [AuthController::class, 'profile']);
-
-    // Student Routes
-    Route::prefix('student')->middleware('role:student')->group(function () {
-        // View Classes & Tasks
-        Route::get('classes', [ClassController::class, 'index']);
-        Route::get('classes/{class}', [ClassController::class, 'show']);
-        Route::get('tasks', [TaskController::class, 'index']);
-        Route::get('tasks/{task}', [TaskController::class, 'show']);
-        
-        // Task Groups
-        Route::apiResource('tasks.groups', TaskGroupController::class)->only(['index', 'store', 'show']);
-        Route::post('task-groups/{taskGroup}/join', [TaskGroupController::class, 'join']);
-        Route::post('task-groups/{taskGroup}/leave', [TaskGroupController::class, 'leave']);
-        
-        // Submissions
-        Route::get('submissions/my', [SubmissionController::class, 'mySubmissions']);
-        Route::post('tasks/{task}/submit', [SubmissionController::class, 'store']);
-        Route::get('submissions/{submission}', [SubmissionController::class, 'show']);
-        
-        // Attachments
-        Route::post('submissions/{submission}/attachments', [SubmissionAttachmentController::class, 'store']);
-    });
-
-    // Shared Routes (with role checking in controllers/policies)
-    Route::get('task-attachments/{attachment}/download', [TaskAttachmentController::class, 'download']);
-    Route::get('submission-attachments/{attachment}/download', [SubmissionAttachmentController::class, 'download']);
 });
+    // Student Routes
+    Route::prefix('v1/student')->middleware(['auth:sanctum', 'role:student'])->group(function () {
+        // View Classes & Tasks
+        Route::get('dashboard/overview', [StudentDashboardController::class, 'overview']);
+
+        Route::get('tasks', [StudentTaskController::class, 'index']);
+        Route::get('tasks/{taskId}', [StudentTaskController::class, 'show']);
+        Route::get('classes/{classId}/tasks', [StudentTaskController::class, 'getTasksByClass']);
+        Route::get('tasks/{taskId}/detail', [StudentTaskController::class, 'getTaskDetail']);
+        Route::get('tasks/{taskId}/attachments/{attachmentId}/download', [StudentTaskController::class, 'downloadAttachment'])
+            ->name('student.task.download-attachment');
+    });
 
 // Admin Routes
 Route::prefix('v1/admin')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
@@ -82,6 +70,7 @@ Route::prefix('v1/admin')->middleware(['auth:sanctum', 'role:admin'])->group(fun
     Route::post('classes/{classId}/assign-students', [ClassManagementController::class, 'assignStudents']);
     Route::delete('classes/{classId}/teacher', [ClassManagementController::class, 'removeTeacher']);
     Route::post('classes/{classId}/students/remove', [ClassManagementController::class, 'removeStudents']);
+    Route::get('classes/{classId}/available-students', [ClassManagementController::class, 'getAvailableStudents']);
     
     // Statistics & Reports
     Route::get('submissions/stats', [SubmissionController::class, 'adminStats']);
@@ -110,8 +99,9 @@ Route::prefix('v1/teacher')->middleware(['auth:sanctum', 'role:teacher'])->group
     
     // Submissions & Grading
     Route::get('submissions', [SubmissionController::class, 'index']);
+    Route::get('submissions/{submission}', [SubmissionController::class, 'show']);
     Route::post('submissions/{submission}/grade', [SubmissionController::class, 'grade']);
+    Route::get('tasks/{task}/submissions', [SubmissionController::class, 'taskSubmissions']);
 });
-
 // Public registration (student only)
 Route::post('v1/register', [AuthController::class, 'register']);

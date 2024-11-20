@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
-use App\Models\Classes;
+use App\Models\ClassRoom;
 
 class DashboardService
 {
@@ -15,7 +15,7 @@ class DashboardService
                 'teachers' => User::where('role', 'teacher')->count(),
                 'students' => User::where('role', 'student')->count(),
             ],
-            'total_active_classes' => Classes::where('status', 'active')->count(),
+            'total_active_classes' => ClassRoom::where('status', 'active')->count(),
             'latest_users' => $this->getLatestUsers(),
             'latest_classes' => $this->getLatestClasses()
         ];
@@ -39,7 +39,7 @@ class DashboardService
 
     private function getLatestClasses(): array
     {
-        return Classes::with('teacher')
+        return ClassRoom::with('teacher')
             ->where('status', 'active')
             ->latest()
             ->take(5)

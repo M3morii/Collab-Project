@@ -6,7 +6,7 @@ use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvid
 use Illuminate\Support\Facades\Gate;
 use App\Models\{
     User,
-    Classes,
+    ClassRoom,
     Task,
     TaskGroup,
     Submission,
@@ -31,7 +31,7 @@ class AuthServiceProvider extends ServiceProvider
      */
     protected $policies = [
         User::class => UserPolicy::class,
-        Classes::class => ClassPolicy::class,
+        ClassRoom::class => ClassPolicy::class,
         Task::class => TaskPolicy::class,
         TaskGroup::class => TaskGroupPolicy::class,
         Submission::class => SubmissionPolicy::class,
