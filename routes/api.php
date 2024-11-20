@@ -12,7 +12,9 @@ use App\Http\Controllers\API\V1\{
     Admin\ClassManagementController,
     Teacher\TaskGroupController,
     Teacher\TeacherDashboardController,
-    Teacher\TaskController
+    Teacher\TaskController,
+    Student\StudentTaskController,
+    Student\StudentDashboardController
 };
 
 /*
@@ -33,32 +35,16 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Common routes (accessible by all authenticated users)
     Route::post('logout', [AuthController::class, 'logout']);
     Route::get('profile', [AuthController::class, 'profile']);
-
-    // Student Routes
-    Route::prefix('student')->middleware('role:student')->group(function () {
-        // View Classes & Tasks
-        Route::get('classes', [ClassController::class, 'index']);
-        Route::get('classes/{class}', [ClassController::class, 'show']);
-        Route::get('tasks', [TaskController::class, 'index']);
-        Route::get('tasks/{task}', [TaskController::class, 'show']);
-        
-        // Task Groups - hanya bisa melihat
-        Route::get('tasks/{task}/groups', [TaskGroupController::class, 'index']);
-        Route::get('tasks/{task}/groups/{group}', [TaskGroupController::class, 'show']);
-        
-        // Submissions
-        Route::get('submissions/my', [SubmissionController::class, 'mySubmissions']);
-        Route::post('tasks/{task}/submit', [SubmissionController::class, 'store']);
-        Route::get('submissions/{submission}', [SubmissionController::class, 'show']);
-        
-        // Attachments
-        Route::post('submissions/{submission}/attachments', [SubmissionAttachmentController::class, 'store']);
-    });
-
-    // Shared Routes (with role checking in controllers/policies)
-    Route::get('task-attachments/{attachment}/download', [TaskAttachmentController::class, 'download']);
-    Route::get('submission-attachments/{attachment}/download', [SubmissionAttachmentController::class, 'download']);
 });
+    // Student Routes
+    Route::prefix('v1/student')->middleware(['auth:sanctum', 'role:student'])->group(function () {
+        // View Classes & Tasks
+        Route::get('dashboard/overview', [StudentDashboardController::class, 'overview']);
+
+        Route::get('tasks', [StudentTaskController::class, 'index']);
+        Route::get('tasks/{taskId}', [StudentTaskController::class, 'show']);
+        Route::get('classes/{classId}/tasks', [StudentTaskController::class, 'getTasksByClass']);
+    });
 
 // Admin Routes
 Route::prefix('v1/admin')->middleware(['auth:sanctum', 'role:admin'])->group(function () {

@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Classes;
+use App\Models\ClassRoom;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -13,14 +13,14 @@ class ClassService
     public function getClassesByRole(User $user): Collection
     {
         return match($user->role) {
-            'admin' => Classes::with('teacher')->get(),
-            'teacher' => Classes::where('teacher_id', $user->id)->with('teacher')->get(),
+            'admin' => ClassRoom::with('teacher')->get(),
+            'teacher' => ClassRoom::where('teacher_id', $user->id)->with('teacher')->get(),
             'student' => $user->classes()->with('teacher')->get(),
             default => Collection::empty()
         };
     }
 
-    public function create(array $data): Classes
+    public function create(array $data): ClassRoom
     {
         return DB::transaction(function () use ($data) {
             // Verify teacher
@@ -29,11 +29,11 @@ class ClassService
                 throw new \Exception('Selected user is not a teacher');
             }
 
-            return Classes::create($data);
+            return ClassRoom::create($data);
         });
     }
 
-    public function update(Classes $class, array $data): Classes
+    public function update(ClassRoom $class, array $data): ClassRoom
     {
         return DB::transaction(function () use ($class, $data) {
             // Verify teacher if teacher_id is being updated
@@ -49,7 +49,7 @@ class ClassService
         });
     }
 
-    public function addStudents(Classes $class, array $studentIds): int
+    public function addStudents(ClassRoom $class, array $studentIds): int
     {
         return DB::transaction(function () use ($class, $studentIds) {
             $addedCount = 0;
@@ -69,7 +69,7 @@ class ClassService
         });
     }
 
-    public function removeStudent(Classes $class, User $student): void
+    public function removeStudent(ClassRoom $class, User $student): void
     {
         DB::transaction(function () use ($class, $student) {
             // Remove student from class
@@ -87,7 +87,7 @@ class ClassService
         });
     }
 
-    public function getAvailableStudents(Classes $class): Collection
+    public function getAvailableStudents(ClassRoom $class): Collection
     {
         return User::where('role', 'student')
             ->where('is_active', true)
@@ -101,7 +101,7 @@ class ClassService
             ->get();
     }
 
-    public function getClassStats(Classes $class): array
+    public function getClassStats(ClassRoom $class): array
     {
         $studentCount = $class->users()->count();
         $taskCount = $class->tasks()->count();
