@@ -7,6 +7,7 @@ use App\Models\ClassRoom;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Resources\ClassResource;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class ClassManagementController extends Controller
 {
