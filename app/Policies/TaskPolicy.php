@@ -4,7 +4,7 @@ namespace App\Policies;
 
 use App\Models\User;
 use App\Models\Task;
-use App\Models\Classes;
+use App\Models\ClassRoom;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class TaskPolicy
@@ -36,7 +36,7 @@ class TaskPolicy
 
     public function delete(User $user, Task $task): bool
     {
-        $class = Classes::find($task->class_id);
+        $class = ClassRoom::find($task->class_id);
         
         \Log::info('Task Delete Policy Check:', [
             'user_id' => $user->id,

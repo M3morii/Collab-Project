@@ -4,7 +4,7 @@ namespace App\Http\Controllers\API\V1\Teacher;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TaskResource;
-use App\Models\Classes;
+use App\Models\ClassRoom;
 use App\Models\Task;
 use App\Services\FileService;
 use Illuminate\Http\Request;
@@ -20,10 +20,10 @@ class TaskController extends Controller
 
     public function index($classId)
     {
-        $class = Classes::findOrFail($classId);
+        $class = ClassRoom::findOrFail($classId);
         
         $tasks = Task::where('class_id', $classId)
-                    ->with(['groups.members'])
+                    ->with(['taskGroup.members'])
                     ->get();
 
         return TaskResource::collection($tasks);
@@ -31,7 +31,7 @@ class TaskController extends Controller
 
     public function store(Request $request, $classId)
     {
-        $class = Classes::findOrFail($classId);
+        $class = ClassRoom::findOrFail($classId);
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -124,7 +124,7 @@ class TaskController extends Controller
     {
         $task = Task::where('class_id', $classId)
                    ->where('id', $taskId)
-                   ->with(['submissions.student', 'groups.members'])
+                   ->with(['submissions.student', 'taskGroup.members'])
                    ->firstOrFail();
 
         return new TaskResource($task);
@@ -175,7 +175,7 @@ class TaskController extends Controller
     public function destroy($classId, $taskId)
     {
         try {
-            $class = Classes::findOrFail($classId);
+            $class = ClassRoom::findOrFail($classId);
             
             $task = Task::withTrashed()
                        ->where('class_id', $classId)
@@ -200,7 +200,7 @@ class TaskController extends Controller
             if ($this->authorize('delete', $task)) {
                 // Hapus task groups jika task bertipe group
                 if ($task->task_type === 'group') {
-                    $task->groups()->delete();
+                    $task->taskGroup()->delete();
                 }
 
                 // Hapus attachment jika ada

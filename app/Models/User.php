@@ -19,46 +19,42 @@ class User extends Authenticatable
 
     protected $hidden = ['password', 'remember_token'];
 
-    // Classes yang diajar (sebagai teacher)
+    // Ganti Classes menjadi ClassRoom
     public function teachingClasses()
     {
-        return $this->hasMany(Classes::class, 'teacher_id');
+        return $this->hasMany(ClassRoom::class, 'teacher_id');
     }
 
-    // Classes yang diikuti (many-to-many)
+    // Ganti Classes menjadi ClassRoom
     public function classes()
     {
-        return $this->belongsToMany(Classes::class, 'class_users')
+        return $this->belongsToMany(ClassRoom::class, 'class_users')
                     ->withPivot('role', 'status')
                     ->withTimestamps();
     }
 
-    // Tasks yang dibuat (sebagai teacher)
+    // Relasi lainnya tetap sama
     public function createdTasks()
     {
         return $this->hasMany(Task::class, 'created_by');
     }
 
-    // Task Groups yang dibuat
     public function createdTaskGroups()
     {
         return $this->hasMany(TaskGroup::class, 'created_by');
     }
 
-    // Keanggotaan dalam task groups
     public function taskGroups()
     {
         return $this->belongsToMany(TaskGroup::class, 'task_group_members')
                     ->withTimestamps();
     }
 
-    // Submissions yang dibuat
     public function submissions()
     {
         return $this->hasMany(Submission::class, 'user_id');
     }
 
-    // Uploaded attachments
     public function taskAttachments()
     {
         return $this->hasMany(TaskAttachment::class, 'uploaded_by');
