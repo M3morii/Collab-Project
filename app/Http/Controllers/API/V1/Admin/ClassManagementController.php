@@ -17,10 +17,7 @@ class ClassManagementController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
         
-        return response()->json([
-            'message' => 'Classes retrieved successfully',
-            'data' => ClassResource::collection($classes)
-        ]);
+        return view('admin.classes.index', compact('classes'));
     }
 
     public function store(Request $request)
@@ -56,21 +53,8 @@ class ClassManagementController extends Controller
                 ], 422);
             }
 
-            // Cek apakah kelas sudah punya teacher
-            if ($class->teacher_id) {
-                return response()->json([
-                    'message' => 'Class already has a teacher assigned. Please remove current teacher first.'
-                ], 422);
-            }
-
-            // Update teacher_id
+            // Update teacher_id saja, tidak perlu attach ke class_users
             $class->update(['teacher_id' => $teacher->id]);
-
-            // Tambahkan ke class_users juga
-            $class->students()->attach($teacher->id, [
-                'role' => 'teacher',
-                'status' => 'active'
-            ]);
 
             return response()->json([
                 'message' => 'Teacher assigned successfully',
@@ -95,34 +79,21 @@ class ClassManagementController extends Controller
 
             $class = ClassRoom::findOrFail($classId);
 
-            // Dapatkan ID siswa yang sudah terdaftar di kelas ini
-            $existingStudentIds = $class->students()
-                ->where('class_users.role', 'student')
-                ->pluck('users.id')
-                ->toArray();
-
-            // Filter out siswa yang sudah terdaftar
-            $newStudentIds = array_diff($validated['student_ids'], $existingStudentIds);
-
-            if (empty($newStudentIds)) {
-                return response()->json([
-                    'message' => 'All selected students are already assigned to this class',
-                    'existing_student_ids' => $existingStudentIds
-                ], 422);
-            }
+            // Hapus semua siswa yang ada terlebih dahulu
+            $class->students()->detach();
 
             // Validasi bahwa semua ID adalah student yang valid
-            $students = User::whereIn('id', $newStudentIds)
+            $students = User::whereIn('id', $validated['student_ids'])
                            ->where('role', 'student')
                            ->get();
 
-            if ($students->count() !== count($newStudentIds)) {
+            if ($students->count() !== count($validated['student_ids'])) {
                 return response()->json([
                     'message' => 'Some of the provided IDs are not valid students'
                 ], 422);
             }
 
-            // Attach hanya siswa baru
+            // Attach hanya siswa
             foreach ($students as $student) {
                 $class->students()->attach($student->id, [
                     'role' => 'student',
@@ -132,9 +103,7 @@ class ClassManagementController extends Controller
 
             return response()->json([
                 'message' => 'Students assigned successfully',
-                'data' => new ClassResource($class->fresh(['students'])),
-                'assigned_students' => $students->pluck('id'),
-                'already_in_class' => $existingStudentIds
+                'data' => new ClassResource($class->fresh(['teacher', 'students']))
             ]);
 
         } catch (\Exception $e) {

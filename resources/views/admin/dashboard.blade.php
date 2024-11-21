@@ -10,6 +10,7 @@
     <link href="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-bootstrap-4/bootstrap-4.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     <style>
         :root {
             --primary-color: #4e73df;
@@ -292,6 +293,56 @@
             to {
                 opacity: 1;
                 transform: translateY(0);
+            }
+        }
+
+        /* Loading animation styles */
+        .spinner-border {
+            animation: spinner-grow 0.75s linear infinite;
+        }
+        
+        @keyframes spinner-grow {
+            0% {
+                transform: scale(0);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0);
+            }
+        }
+        
+        /* Success animation */
+        .swal2-success {
+            animation: success-animation 0.3s ease-in-out;
+        }
+        
+        @keyframes success-animation {
+            from {
+                transform: scale(0.7);
+            }
+            to {
+                transform: scale(1);
+            }
+        }
+        
+        /* Error animation */
+        .animate__shakeX {
+            animation: shakeX 0.8s;
+        }
+        
+        @keyframes shakeX {
+            0%, 100% {
+                transform: translateX(0);
+            }
+            10%, 30%, 50%, 70%, 90% {
+                transform: translateX(-5px);
+            }
+            20%, 40%, 60%, 80% {
+                transform: translateX(5px);
             }
         }
     </style>
@@ -947,6 +998,122 @@
         // Event listener saat modal kelas dibuka
         document.getElementById('classModal').addEventListener('show.bs.modal', function () {
             loadTeachersAndStudents();
+        });
+
+        // Tambahkan fungsi untuk menangani assign siswa/guru
+        function handleAssignment(classId, type) {
+            // Tampilkan loading animation dengan Swal
+            Swal.fire({
+                title: 'Sedang memproses...',
+                html: `
+                    <div class="d-flex flex-column align-items-center">
+                        <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div class="text-muted">
+                            Sedang ${type === 'teacher' ? 'menugaskan guru' : 'mendaftarkan siswa'}...
+                        </div>
+                    </div>
+                `,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Lakukan proses assign
+            fetch(`/api/v1/admin/classes/${classId}/${type === 'teacher' ? 'assign-teacher' : 'assign-students'}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({
+                    [type === 'teacher' ? 'teacher_id' : 'student_ids']: selectedIds
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Tampilkan notifikasi sukses dengan animasi
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: `${type === 'teacher' ? 'Guru berhasil ditugaskan' : 'Siswa berhasil didaftarkan'}`,
+                        showConfirmButton: false,
+                        timer: 1500,
+                        didOpen: () => {
+                            // Tambahkan animasi confetti
+                            confetti({
+                                particleCount: 100,
+                                spread: 70,
+                                origin: { y: 0.6 }
+                            });
+                        }
+                    });
+                    
+                    // Refresh data
+                    loadClasses();
+                } else {
+                    throw new Error('Gagal melakukan assignment');
+                }
+            })
+            .catch(error => {
+                // Tampilkan notifikasi error dengan animasi
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Terjadi kesalahan saat melakukan assignment',
+                    showConfirmButton: true,
+                    confirmButtonText: 'Tutup',
+                    customClass: {
+                        popup: 'animate__animated animate__shakeX'
+                    }
+                });
+            });
+        }
+
+        // Update event listener untuk form logout
+        document.querySelector('form[action="{{ route("logout") }}"]').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Konfirmasi logout menggunakan SweetAlert2
+            const result = await Swal.fire({
+                title: 'Apakah Anda yakin?',
+                text: "Anda akan keluar dari sistem",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, Keluar!',
+                cancelButtonText: 'Batal'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    // Lakukan proses logout dengan AJAX
+                    const response = await fetch('/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        }
+                    });
+
+                    // Hapus token dari localStorage
+                    localStorage.removeItem('token');
+                    
+                    // Redirect ke halaman login
+                    window.location.href = '/login';
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    // Jika terjadi error, tetap redirect ke login
+                    window.location.href = '/login';
+                }
+            }
         });
     </script>
 </body>

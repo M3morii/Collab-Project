@@ -2,9 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\V1\AuthController;
-use App\Http\Controllers\TaskController;
+use App\Http\Controllers\API\V1\Teacher\TaskController as TeacherTaskController;
+use App\Http\Controllers\API\V1\Teacher\TeacherDashboardController;
+use App\Http\Controllers\API\V1\Teacher\TeacherClassController;
 use App\Models\Task;
-use App\Http\Controllers\Web\ClassController;
+use App\Http\Controllers\API\V1\Admin\ClassManagementController as ClassController;
 
 /*
 |--------------------------------------------------------------------------
@@ -33,9 +35,11 @@ use App\Http\Controllers\Web\ClassController;
 
     Route::post('login', [AuthController::class, 'login']);
     Route::post('register', [AuthController::class, 'register']);
+    Route::post('logout', [AuthController::class, 'logout'])->name('logout');
 
 
 // Admin routes
+Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/dashboard', function () {
         $tasks = Task::orderBy('created_at', 'desc')->get();
         return view('admin.dashboard', compact('tasks'));
@@ -45,19 +49,17 @@ use App\Http\Controllers\Web\ClassController;
     Route::post('/admin/classes', [ClassController::class, 'store'])->name('admin.classes.store');
     Route::put('/admin/classes/{class}', [ClassController::class, 'update'])->name('admin.classes.update');
     Route::delete('/admin/classes/{class}', [ClassController::class, 'destroy'])->name('admin.classes.destroy');
-
-// User routes
-Route::middleware(['auth:sanctum', 'role:student'])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('user.dashboard');
-    })->name('dashboard');
-    
-    Route::get('/tasks/assigned', [TaskController::class, 'assignedTasks'])
-        ->name('tasks.assigned');
-    Route::post('/tasks/{task}/submit', [TaskController::class, 'submitTask'])
-        ->name('tasks.submit');
 });
 
-Route::post('/logout', [AuthController::class, 'logout'])
-    ->middleware('auth:sanctum')
-    ->name('logout');
+// Teacher routes
+Route::middleware(['auth', 'role:teacher'])->group(function () {
+    // Dashboard
+    Route::get('/teacher/dashboard', [TeacherDashboardController::class, 'index'])->name('teacher.dashboard');
+    
+    // // Classes
+    // Route::get('/teacher/classes', [TeacherDashboardController::class, 'getAssignedClasses'])->name('teacher.classes');
+    
+    // Tasks
+    Route::get('/teacher/classes/{classId}/tasks', [TeacherTaskController::class, 'index'])->name('teacher.tasks.index');
+});
+
