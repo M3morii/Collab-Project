@@ -18,7 +18,8 @@ class TaskGroup extends Model
         'class_id'
     ];
 
-    // Relasi yang benar
+    protected $table = 'task_groups';
+
     public function task()
     {
         return $this->belongsTo(Task::class);
@@ -31,11 +32,9 @@ class TaskGroup extends Model
 
     public function members()
     {
-        return $this->belongsToMany(User::class, 'task_group_members')
-                    ->withTimestamps();
+        return $this->belongsToMany(User::class, 'task_group_members', 'task_group_id', 'user_id');
     }
 
-    // Tambahkan relasi class
     public function class()
     {
         return $this->belongsTo(ClassRoom::class, 'class_id');

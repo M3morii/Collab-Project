@@ -11,8 +11,15 @@ class TaskGroupController extends Controller
 {
     public function index($classId, $taskId)
     {
+        // Validasi task harus bertipe group
         $task = Task::where('class_id', $classId)
-                    ->findOrFail($taskId);
+            ->findOrFail($taskId);
+
+        if ($task->task_type !== 'group') {
+            return response()->json([
+                'message' => 'Cannot view groups for non-group task type'
+            ], 422);
+        }
 
         $groups = TaskGroup::with('members')
             ->where('task_id', $taskId)
@@ -23,6 +30,16 @@ class TaskGroupController extends Controller
 
     public function store(Request $request, $classId, $taskId)
     {
+        // Validasi task harus bertipe group
+        $task = Task::where('class_id', $classId)
+            ->findOrFail($taskId);
+
+        if ($task->task_type !== 'group') {
+            return response()->json([
+                'message' => 'Cannot create group for non-group task type'
+            ], 422);
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',

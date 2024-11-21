@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\TaskResource;
 use App\Models\Task;
 use App\Models\ClassRoom;
+use App\Models\TaskGroup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -226,6 +227,65 @@ class StudentTaskController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Failed to retrieve task detail',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getGroupMembers($taskId)
+    {
+        try {
+            // Cari task dan validasi akses siswa
+            $task = Task::whereHas('class', function($query) {
+                    $query->whereHas('students', function($q) {
+                        $q->where('users.id', auth()->id())
+                            ->where('class_users.role', 'student')
+                            ->where('class_users.status', 'active');
+                    });
+                })
+                ->findOrFail($taskId);
+
+            // Cek apakah tugas bertipe group
+            if ($task->task_type !== 'group') {
+                return response()->json([
+                    'message' => 'This task is not a group task',
+                ], 400);
+            }
+
+            // Cari group berdasarkan task_group_members
+            $myGroup = TaskGroup::where('task_id', $taskId)  // Menggunakan taskId yang diterima
+                ->whereHas('members', function($query) {
+                    $query->where('users.id', auth()->id());
+                })
+                ->with(['members', 'creator'])
+                ->first();
+
+            if (!$myGroup) {
+                return response()->json([
+                    'message' => 'You are not assigned to any group for this task',
+                ], 404);
+            }
+
+            return response()->json([
+                'message' => 'Group members retrieved successfully',
+                'data' => [
+                    'task_id' => $task->id,
+                    'task_title' => $task->title,
+                    'group_id' => $myGroup->id,
+                    'group_name' => $myGroup->name,
+                    'members' => $myGroup->members->map(function($member) {
+                        return [
+                            'id' => $member->id,
+                            'name' => $member->name,
+                            'email' => $member->email
+                        ];
+                    })
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to retrieve group members',
                 'error' => $e->getMessage()
             ], 500);
         }

@@ -2,16 +2,18 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Submission extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
-        'task_id', 'user_id', 'task_group_id',
-        'content', 'score', 'feedback', 'status',
+        'task_id',
+        'user_id', 
+        'task_group_id',
+        'content',
+        'score',
+        'feedback',
+        'status',
         'submitted_at'
     ];
 

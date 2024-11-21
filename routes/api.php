@@ -14,7 +14,8 @@ use App\Http\Controllers\API\V1\{
     Teacher\TeacherDashboardController,
     Teacher\TaskController,
     Student\StudentTaskController,
-    Student\StudentDashboardController
+    Student\StudentDashboardController,
+    Student\StudentSubmissionController
 };
 
 /*
@@ -47,6 +48,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('tasks/{taskId}/detail', [StudentTaskController::class, 'getTaskDetail']);
         Route::get('tasks/{taskId}/attachments/{attachmentId}/download', [StudentTaskController::class, 'downloadAttachment'])
             ->name('student.task.download-attachment');
+        Route::get('tasks/{taskId}/group-members', [StudentTaskController::class, 'getGroupMembers']);
+        Route::post('tasks/{taskId}/submissions', [StudentSubmissionController::class, 'store']);
     });
 
 // Admin Routes
