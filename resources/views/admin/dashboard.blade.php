@@ -1074,6 +1074,47 @@
                 });
             });
         }
+
+        // Update event listener untuk form logout
+        document.querySelector('form[action="{{ route("logout") }}"]').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Konfirmasi logout menggunakan SweetAlert2
+            const result = await Swal.fire({
+                title: 'Apakah Anda yakin?',
+                text: "Anda akan keluar dari sistem",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, Keluar!',
+                cancelButtonText: 'Batal'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    // Lakukan proses logout dengan AJAX
+                    const response = await fetch('/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        }
+                    });
+
+                    // Hapus token dari localStorage
+                    localStorage.removeItem('token');
+                    
+                    // Redirect ke halaman login
+                    window.location.href = '/login';
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    // Jika terjadi error, tetap redirect ke login
+                    window.location.href = '/login';
+                }
+            }
+        });
     </script>
 </body>
 </html> 

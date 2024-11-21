@@ -9,6 +9,15 @@ use App\Http\Resources\ClassResource;
 
 class TeacherDashboardController extends Controller
 {
+    public function index()
+    {
+        $classes = ClassRoom::with('students')
+            ->where('teacher_id', auth()->id())
+            ->get();
+
+        return view('teacher.dashboard', compact('classes'));
+    }
+
     /**
      * Get list of classes assigned to teacher
      */
@@ -25,15 +34,9 @@ class TeacherDashboardController extends Controller
                 })
                 ->paginate(10);
 
-            return response()->json([
-                'message' => 'Classes retrieved successfully',
-                'data' => ClassResource::collection($classes)
-            ]);
+            return view('teacher.classes', compact('classes'));
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to retrieve classes',
-                'error' => $e->getMessage()
-            ], 500);
+            return back()->with('error', 'Gagal memuat daftar kelas');
         }
     }
 }

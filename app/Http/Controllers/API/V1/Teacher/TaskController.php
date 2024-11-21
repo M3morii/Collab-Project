@@ -20,13 +20,18 @@ class TaskController extends Controller
 
     public function index($classId)
     {
-        $class = ClassRoom::findOrFail($classId);
-        
-        $tasks = Task::where('class_id', $classId)
-                    ->with(['taskGroup.members'])
-                    ->get();
+        try {
+            $class = ClassRoom::findOrFail($classId);
+            
+            $tasks = Task::where('class_id', $classId)
+                        ->with(['taskGroup.members'])
+                        ->get();
 
-        return TaskResource::collection($tasks);
+            return view('teacher.tasks.index', compact('class', 'tasks'));
+        } catch (\Exception $e) {
+            \Log::error('Error in TaskController@index: ' . $e->getMessage());
+            return back()->with('error', 'Gagal memuat daftar tugas: ' . $e->getMessage());
+        }
     }
 
     public function store(Request $request, $classId)
@@ -221,5 +226,16 @@ class TaskController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function submissions($classId, $taskId)
+    {
+        $class = ClassRoom::findOrFail($classId);
+        $task = Task::where('class_id', $classId)
+                   ->where('id', $taskId)
+                   ->with(['submissions.student', 'taskGroup.members'])
+                   ->firstOrFail();
+
+        return view('teacher.tasks.submissions', compact('class', 'task'));
     }
 }

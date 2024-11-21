@@ -180,6 +180,33 @@
                 visibility: hidden;
             }
         }
+
+        /* Styling untuk checkbox container */
+        .student-list {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        /* Styling untuk checkbox */
+        .form-check {
+            padding-left: 2rem;
+        }
+
+        .form-check-input {
+            cursor: pointer;
+        }
+
+        .form-check-label {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* Hover effect */
+        .form-check:hover {
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -256,8 +283,37 @@
                                 <th>Aksi</th>
                             </tr>
                         </thead>
-                        <tbody id="classTableBody">
-                            <!-- Data akan diisi melalui JavaScript -->
+                        <tbody>
+                            @forelse($classes as $index => $class)
+                                <tr class="animate__animated animate__fadeIn">
+                                    <td>{{ $index + 1 }}</td>
+                                    <td>{{ $class->name }}</td>
+                                    <td>{{ $class->description }}</td>
+                                    <td>{{ $class->kkm_score ?? '-' }}</td>
+                                    <td>{{ $class->academic_year ?? '-' }}</td>
+                                    <td>{{ $class->semester ?? '-' }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ $class->status === 'active' ? 'success' : 'danger' }}">
+                                            {{ $class->status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning" onclick="editClass({{ $class->id }})">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-info" onclick="detailClass({{ $class->id }})">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-primary" onclick="showAssignModal({{ $class->id }})">
+                                            <i class="bi bi-people"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="text-center">Tidak ada data kelas</td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
@@ -335,10 +391,11 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Siswa</label>
-                            <select class="form-select" id="studentSelect" multiple>
-                                <!-- Options akan diisi melalui JavaScript -->
-                            </select>
-                            <small class="text-muted">Tahan Ctrl/Cmd untuk memilih beberapa siswa</small>
+                            <div class="student-list" style="max-height: 300px; overflow-y: auto;">
+                                <div class="form-check" id="studentCheckboxes">
+                                    <!-- Checkbox akan diisi melalui JavaScript -->
+                                </div>
+                            </div>
                         </div>
                         <button type="submit" class="btn btn-primary">Simpan</button>
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
@@ -351,6 +408,63 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        // Tambahkan fungsi fetchClasses sebelum event listener DOMContentLoaded
+        async function fetchClasses() {
+            try {
+                // Refresh halaman untuk mendapatkan data terbaru
+                window.location.reload();
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Terjadi kesalahan saat memperbarui data'
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inisialisasi event listener untuk modal
+            const classModal = document.getElementById('classModal');
+            if (classModal) {
+                classModal.addEventListener('hidden.bs.modal', function () {
+                    const classForm = document.getElementById('classForm');
+                    if (classForm) {
+                        classForm.reset();
+                        delete classForm.dataset.classId;
+                    }
+                    const classModalTitle = document.getElementById('classModalTitle');
+                    if (classModalTitle) {
+                        classModalTitle.textContent = 'Tambah Kelas';
+                    }
+                });
+            }
+
+            // Update statistik langsung dari data yang ada
+            const classes = @json($classes);
+            const totalClasses = classes.length;
+            const activeClasses = classes.filter(c => c.status === 'active').length;
+            const inactiveClasses = classes.filter(c => c.status === 'inactive').length;
+
+            document.getElementById('totalClasses').textContent = totalClasses;
+            document.getElementById('activeClasses').textContent = activeClasses;
+            document.getElementById('inactiveClasses').textContent = inactiveClasses;
+
+            // Animasi untuk cards statistik
+            const cards = document.querySelectorAll('.card');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${0.2 * (index + 1)}s`;
+            });
+
+            // Hapus page transition setelah konten dimuat
+            setTimeout(() => {
+                const transition = document.querySelector('.page-transition');
+                if (transition) {
+                    transition.remove();
+                }
+            }, 1000);
+        });
+
         // Fungsi untuk mendapatkan token
         function getToken() {
             const token = localStorage.getItem('token');
@@ -361,18 +475,11 @@
             return token;
         }
 
-        // Fungsi untuk mengambil data kelas
-        async function fetchClasses() {
-            const spinner = document.querySelector('.loading-spinner');
-            spinner.style.display = 'block';
-            
-            const token = getToken();
-            if (!token) return;
-
+        // Fungsi untuk detail kelas
+        async function detailClass(id) {
             try {
-                const response = await fetch('/api/v1/admin/classes', {
+                const response = await fetch(`/api/v1/admin/classes/${id}`, {
                     headers: {
-                        'Authorization': `Bearer ${token}`,
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                     }
@@ -380,17 +487,30 @@
 
                 if (response.ok) {
                     const result = await response.json();
-                    displayClasses(result.data);
-                    updateStatistics(result.data);
-                } else if (response.status === 401) {
-                    // Token tidak valid
-                    localStorage.removeItem('token');
-                    window.location.href = '/login';
-                } else {
+                    const data = result.data;
+                    
+                    // Format daftar siswa
+                    const studentsList = data.students && data.students.length > 0
+                        ? data.students.map(student => `<li>${student.name}</li>`).join('')
+                        : '<li>Belum ada siswa</li>';
+
                     Swal.fire({
-                        icon: 'error',
-                        title: 'Oops...',
-                        text: 'Gagal mengambil data kelas'
+                        title: data.name,
+                        html: `
+                            <div class="text-start">
+                                <p><strong>Deskripsi:</strong> ${data.description}</p>
+                                <p><strong>KKM:</strong> ${data.kkm_score}</p>
+                                <p><strong>Tahun Akademik:</strong> ${data.academic_year}</p>
+                                <p><strong>Semester:</strong> ${data.semester}</p>
+                                <p><strong>Status:</strong> ${data.status}</p>
+                                <p><strong>Guru:</strong> ${data.teacher ? data.teacher.name : 'Belum ditentukan'}</p>
+                                <p><strong>Daftar Siswa:</strong></p>
+                                <ul class="text-start">
+                                    ${studentsList}
+                                </ul>
+                            </div>
+                        `,
+                        width: '600px'
                     });
                 }
             } catch (error) {
@@ -398,10 +518,50 @@
                 Swal.fire({
                     icon: 'error',
                     title: 'Oops...',
-                    text: 'Terjadi kesalahan saat mengambil data'
+                    text: 'Terjadi kesalahan saat mengambil detail kelas'
                 });
-            } finally {
-                spinner.style.display = 'none';
+            }
+        }
+
+        // Fungsi untuk edit kelas
+        async function editClass(id) {
+            try {
+                const response = await fetch(`/api/v1/admin/classes/${id}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const data = result.data;
+                    
+                    // Isi form dengan data yang ada
+                    document.getElementById('className').value = data.name;
+                    document.getElementById('classDescription').value = data.description;
+                    document.getElementById('classKkm').value = data.kkm_score;
+                    document.getElementById('classYear').value = data.academic_year;
+                    document.getElementById('classSemester').value = data.semester;
+                    document.getElementById('classStatus').value = data.status;
+
+                    // Simpan ID kelas yang sedang diedit
+                    document.getElementById('classForm').dataset.classId = id;
+
+                    // Ubah judul modal
+                    document.getElementById('classModalTitle').textContent = 'Edit Kelas';
+
+                    // Tampilkan modal
+                    const modal = new bootstrap.Modal(document.getElementById('classModal'));
+                    modal.show();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Terjadi kesalahan saat mengambil data kelas'
+                });
             }
         }
 
@@ -473,201 +633,12 @@
             }
         });
 
-        // Fungsi untuk menampilkan data ke tabel
-        function displayClasses(classes) {
-            const tableBody = document.getElementById('classTableBody');
-            tableBody.innerHTML = '';
-
-            classes.forEach((kelas, index) => {
-                const kkmScore = kelas.kkm_score ?? '-';
-                const academicYear = kelas.academic_year ?? '-';
-                const semester = kelas.semester ?? '-';
-                
-                tableBody.innerHTML += `
-                    <tr class="animate__animated animate__fadeIn">
-                        <td>${index + 1}</td>
-                        <td>${kelas.name}</td>
-                        <td>${kelas.description}</td>
-                        <td>${kkmScore}</td>
-                        <td>${academicYear}</td>
-                        <td>${semester}</td>
-                        <td>
-                            <span class="badge bg-${kelas.status === 'active' ? 'success' : 'danger'}">
-                                ${kelas.status}
-                            </span>
-                        </td>
-                        <td>
-                            <button class="btn btn-sm btn-warning" onclick="editClass(${kelas.id})">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="btn btn-sm btn-info" onclick="detailClass(${kelas.id})">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-primary" onclick="showAssignModal(${kelas.id})">
-                                <i class="bi bi-people"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
-        }
-
-        // Fungsi untuk melihat detail kelas
-        async function detailClass(id) {
-            const token = getToken();
-            if (!token) return;
-
-            try {
-                const response = await fetch(`/api/v1/admin/classes/${id}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    const data = result.data;
-                    
-                    // Format daftar siswa
-                    const studentsList = data.students && data.students.length > 0
-                        ? data.students.map(student => `<li>${student.name}</li>`).join('')
-                        : '<li>Belum ada siswa</li>';
-
-                    Swal.fire({
-                        title: data.name,
-                        html: `
-                            <div class="text-start">
-                                <p><strong>Deskripsi:</strong> ${data.description}</p>
-                                <p><strong>KKM:</strong> ${data.kkm_score}</p>
-                                <p><strong>Tahun Akademik:</strong> ${data.academic_year}</p>
-                                <p><strong>Semester:</strong> ${data.semester}</p>
-                                <p><strong>Status:</strong> ${data.status}</p>
-                                <p><strong>Guru:</strong> ${data.teacher ? data.teacher.name : 'Belum ditentukan'}</p>
-                                <p><strong>Daftar Siswa:</strong></p>
-                                <ul class="text-start">
-                                    ${studentsList}
-                                </ul>
-                            </div>
-                        `,
-                        width: '600px'
-                    });
-                } else {
-                    throw new Error('Gagal mengambil detail kelas');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Oops...',
-                    text: 'Terjadi kesalahan saat mengambil detail kelas'
-                });
-            }
-        }
-
-        // Fungsi untuk edit kelas
-        async function editClass(id) {
-            const token = getToken();
-            if (!token) return;
-
-            try {
-                const response = await fetch(`/api/v1/admin/classes/${id}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    const data = result.data;
-                    
-                    // Isi form dengan data yang ada
-                    document.getElementById('className').value = data.name;
-                    document.getElementById('classDescription').value = data.description;
-                    document.getElementById('classKkm').value = data.kkm_score;
-                    document.getElementById('classYear').value = data.academic_year;
-                    document.getElementById('classSemester').value = data.semester;
-                    document.getElementById('classStatus').value = data.status;
-
-                    // Simpan ID kelas yang sedang diedit
-                    document.getElementById('classForm').dataset.classId = id;
-
-                    // Ubah judul modal
-                    document.getElementById('classModalTitle').textContent = 'Edit Kelas';
-
-                    // Tampilkan modal
-                    const modal = new bootstrap.Modal(document.getElementById('classModal'));
-                    modal.show();
-                } else if (response.status === 401) {
-                    localStorage.removeItem('token');
-                    window.location.href = '/login';
-                } else {
-                    throw new Error('Gagal mengambil data kelas');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Oops...',
-                    text: 'Terjadi kesalahan saat mengambil data kelas'
-                });
-            }
-        }
-
         // Tambahkan event listener untuk reset form saat modal ditutup
         document.getElementById('classModal').addEventListener('hidden.bs.modal', function () {
             document.getElementById('classForm').reset();
             document.getElementById('classForm').dataset.classId;
             document.getElementById('classModalTitle').textContent = 'Tambah Kelas';
         });
-
-        // Load data kelas saat halaman dimuat
-        document.addEventListener('DOMContentLoaded', function() {
-            // Inisialisasi event listener untuk modal
-            const classModal = document.getElementById('classModal');
-            if (classModal) {
-                classModal.addEventListener('hidden.bs.modal', function () {
-                    const classForm = document.getElementById('classForm');
-                    if (classForm) {
-                        classForm.reset();
-                        delete classForm.dataset.classId;
-                    }
-                    const classModalTitle = document.getElementById('classModalTitle');
-                    if (classModalTitle) {
-                        classModalTitle.textContent = 'Tambah Kelas';
-                    }
-                });
-            }
-
-            // Panggil fetchClasses
-            fetchClasses();
-
-            // Animasi untuk cards statistik
-            const cards = document.querySelectorAll('.card');
-            cards.forEach((card, index) => {
-                card.style.animationDelay = `${0.2 * (index + 1)}s`;
-            });
-
-            // Hapus page transition setelah konten dimuat
-            setTimeout(() => {
-                const transition = document.querySelector('.page-transition');
-                if (transition) {
-                    transition.remove();
-                }
-            }, 1000);
-        });
-
-        // Update statistics
-        function updateStatistics(classes) {
-            const totalClasses = classes.length;
-            const activeClasses = classes.filter(c => c.status === 'active').length;
-            const inactiveClasses = classes.filter(c => c.status === 'inactive').length;
-
-            document.getElementById('totalClasses').textContent = totalClasses;
-            document.getElementById('activeClasses').textContent = activeClasses;
-            document.getElementById('inactiveClasses').textContent = inactiveClasses;
-        }
 
         // Add smooth scrolling
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -741,17 +712,28 @@
                     teacherSelect.appendChild(option);
                 });
 
-                // Isi select siswa
-                const studentSelect = document.getElementById('studentSelect');
-                studentSelect.innerHTML = '';
+                // Ubah bagian ini untuk menggunakan checkbox
+                const studentCheckboxes = document.getElementById('studentCheckboxes');
+                studentCheckboxes.innerHTML = '';
                 students.data.forEach(student => {
-                    const option = document.createElement('option');
-                    option.value = student.id;
-                    option.textContent = student.name;
-                    if (classData.data.students.some(s => s.id === student.id)) {
-                        option.selected = true;
-                    }
-                    studentSelect.appendChild(option);
+                    const div = document.createElement('div');
+                    div.className = 'form-check mb-2';
+                    
+                    const input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.className = 'form-check-input';
+                    input.id = `student-${student.id}`;
+                    input.value = student.id;
+                    input.checked = classData.data.students.some(s => s.id === student.id);
+                    
+                    const label = document.createElement('label');
+                    label.className = 'form-check-label';
+                    label.htmlFor = `student-${student.id}`;
+                    label.textContent = student.name;
+                    
+                    div.appendChild(input);
+                    div.appendChild(label);
+                    studentCheckboxes.appendChild(div);
                 });
 
                 // Simpan class ID ke form
@@ -771,7 +753,7 @@
             }
         }
 
-        // Event listener untuk form assign
+        // Update event listener untuk form assign
         document.getElementById('assignForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -780,13 +762,15 @@
 
             const classId = this.dataset.classId;
             const teacherId = document.getElementById('teacherSelect').value;
-            const selectedStudents = Array.from(document.getElementById('studentSelect').selectedOptions)
-                .map(option => option.value);
+            
+            // Ubah cara mengambil siswa yang dipilih
+            const selectedStudents = Array.from(document.querySelectorAll('#studentCheckboxes input[type="checkbox"]:checked'))
+                .map(checkbox => checkbox.value);
 
             try {
                 // Assign guru
                 if (teacherId) {
-                    await fetch(`/api/v1/admin/classes/${classId}/assign-teacher`, {
+                    const teacherResponse = await fetch(`/api/v1/admin/classes/${classId}/assign-teacher`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -796,11 +780,13 @@
                         },
                         body: JSON.stringify({ teacher_id: teacherId })
                     });
+
+                    if (!teacherResponse.ok) throw new Error('Gagal menyimpan data guru');
                 }
 
                 // Assign siswa
                 if (selectedStudents.length > 0) {
-                    await fetch(`/api/v1/admin/classes/${classId}/assign-students`, {
+                    const studentResponse = await fetch(`/api/v1/admin/classes/${classId}/assign-students`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -810,6 +796,8 @@
                         },
                         body: JSON.stringify({ student_ids: selectedStudents })
                     });
+
+                    if (!studentResponse.ok) throw new Error('Gagal menyimpan data siswa');
                 }
 
                 // Tutup modal dan refresh data
@@ -822,9 +810,10 @@
                     text: 'Guru dan siswa berhasil ditambahkan ke kelas',
                     timer: 1500,
                     showConfirmButton: false
+                }).then(() => {
+                    // Refresh halaman setelah notifikasi sukses
+                    fetchClasses();
                 });
-                
-                fetchClasses();
 
             } catch (error) {
                 console.error('Error:', error);
