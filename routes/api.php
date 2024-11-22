@@ -3,9 +3,6 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\V1\{
     AuthController,
-    ClassController,
-    TaskAttachmentController,
-    SubmissionAttachmentController,
     Teacher\SubmissionController,
     Admin\DashboardController,
     Admin\UserManagementController,
@@ -36,6 +33,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Common routes (accessible by all authenticated users)
     Route::post('logout', [AuthController::class, 'logout']);
     Route::get('profile', [AuthController::class, 'profile']);
+    Route::post('profile/update', [AuthController::class, 'updateProfile']);
 });
     // Student Routes
     Route::prefix('v1/student')->middleware(['auth:sanctum', 'role:student'])->group(function () {
@@ -94,11 +92,6 @@ Route::prefix('v1/teacher')->middleware(['auth:sanctum', 'role:teacher'])->group
     // Task Groups
     Route::get('classes/{classId}/tasks/{taskId}/groups', [TaskGroupController::class, 'index']);
     Route::post('classes/{classId}/tasks/{taskId}/groups', [TaskGroupController::class, 'store']);
-    
-    // Task Attachments
-    Route::get('classes/{classId}/tasks/{taskId}/attachments', [TaskAttachmentController::class, 'index']);
-    Route::post('classes/{classId}/tasks/{taskId}/attachments', [TaskAttachmentController::class, 'store']);
-    Route::delete('classes/{classId}/tasks/{taskId}/attachments/{attachmentId}', [TaskAttachmentController::class, 'destroy']);
     
     // Submissions & Grading
     Route::get('submissions', [SubmissionController::class, 'index']);

@@ -8,7 +8,8 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
-
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 class AuthController extends Controller
 {
     protected $authService;
@@ -53,5 +54,66 @@ class AuthController extends Controller
         return response()->json([
             'user' => new UserResource(auth()->user())
         ]);
+    }
+
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+        
+        // Jika tidak ada input apapun, kembalikan data user yang ada
+        if ($request->all() === []) {
+            return response()->json([
+                'message' => 'No changes made to profile',
+                'user' => new UserResource($user)
+            ]);
+        }
+        
+        // Validasi input jika ada
+        $validated = $request->validate([
+            'name' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:255',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+        ]);
+
+        try {
+            // Filter out null values untuk mempertahankan nilai lama jika tidak diupdate
+            $dataToUpdate = array_filter($validated, function ($value) {
+                return $value !== null;
+            });
+
+            // Handle avatar upload jika ada
+            if ($request->hasFile('avatar')) {
+                // Hapus avatar lama jika ada
+                if ($user->avatar) {
+                    Storage::delete($user->avatar);
+                }
+                
+                // Upload avatar baru
+                $avatarPath = $request->file('avatar')->store('avatars');
+                $dataToUpdate['avatar'] = $avatarPath;
+            }
+
+            // Update user data jika ada yang perlu diupdate
+            if (!empty($dataToUpdate)) {
+                $user->update($dataToUpdate);
+            }
+
+            return response()->json([
+                'message' => !empty($dataToUpdate) ? 'Profile updated successfully' : 'No changes made to profile',
+                'user' => new UserResource($user)
+            ]);
+
+        } catch (\Exception $e) {
+            // Hapus file yang diupload jika terjadi error
+            if (isset($avatarPath)) {
+                Storage::delete($avatarPath);
+            }
+
+            return response()->json([
+                'message' => 'Failed to update profile',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 } 
