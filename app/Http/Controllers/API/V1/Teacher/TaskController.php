@@ -30,7 +30,7 @@ class TaskController extends Controller
             return view('teacher.tasks.index', compact('class', 'tasks'));
         } catch (\Exception $e) {
             \Log::error('Error in TaskController@index: ' . $e->getMessage());
-            return back()->with('error', 'Gagal memuat daftar tugas: ' . $e->getMessage());
+            return back()->with('error', 'Gagal memuat daftar tugas ' . $e->getMessage());
         }
     }
 
