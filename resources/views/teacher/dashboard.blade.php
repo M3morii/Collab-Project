@@ -27,9 +27,14 @@
                 <div class="d-flex">
                     <div class="dropdown">
                         <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i> {{ auth()->user()->name }}
+                            <i class="bi bi-person-circle"></i> <span id="dropdownTeacherName">Loading...</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a href="#" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                                    Edit Profil
+                                </a>
+                            </li>
                             <li>
                                 <form action="{{ route('logout') }}" method="POST">
                                     @csrf
@@ -48,7 +53,7 @@
         <!-- Welcome Card -->
         <div class="card mb-4">
             <div class="card-body">
-                <h5 class="card-title">Selamat Datang, {{ auth()->user()->name }}!</h5>
+                <h5 class="card-title">Selamat Pagi <span id="teacherName">Loading...</span>!</h5>
                 <p class="card-text">Berikut adalah ringkasan kelas anda.</p>
             </div>
         </div>
@@ -110,10 +115,13 @@
                                 <td>
                                     <div class="card-footer bg-white border-top-0">
                                         <div class="d-grid gap-2">
-                                            <a href="{{ route('teacher.tasks.index', ['classId' => $class->id]) }}" 
-                                               class="btn btn-outline-primary">
+                                            <a href="{{ route('teacher.tasks.index', $class->id) }}" 
+                                               class="btn btn-primary">
                                                 <i class="bi bi-list-task"></i> Manajemen Tugas
                                             </a>
+                                            <button type="button" class="btn btn-success btn-sm" onclick="window.location.href='{{ route('teacher.tasks.index', $class->id) }}?type=group'">
+                                                <i class="bi bi-people"></i> Manajemen Kelompok
+                                            </button>
                                         </div>
                                     </div>
                                 </td>
@@ -125,6 +133,104 @@
                             @endforelse
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Edit Profil -->
+    <div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editProfileModalLabel">Edit Profil</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Alert untuk error messages -->
+                    <div id="profileErrorMessages" class="alert alert-danger d-none">
+                        <ul class="mb-0"></ul>
+                    </div>
+
+                    <form id="editProfileForm" enctype="multipart/form-data">
+                        @csrf
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Nama Lengkap</label>
+                            <input type="text" class="form-control" id="editName" name="name" maxlength="255">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Nomor Telepon</label>
+                            <input type="tel" class="form-control" id="editPhone" name="phone" maxlength="20">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Alamat</label>
+                            <textarea class="form-control" id="editAddress" name="address" maxlength="255" rows="3"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="avatar" class="form-label">Foto Profil</label>
+                            <input type="file" class="form-control" id="editAvatar" name="avatar" accept="image/jpeg,image/png,image/jpg">
+                            <small class="text-muted">Format: JPEG, PNG, JPG. Maksimal 2MB</small>
+                        </div>
+
+                        <div class="modal-footer px-0 pb-0">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-primary" id="submitProfileBtn">Simpan Perubahan</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Manajemen Kelompok -->
+    <div class="modal fade" id="manageGroupsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Manajemen Kelompok</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Form Tambah Kelompok -->
+                    <form id="createGroupForm" class="mb-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title">Tambah Kelompok Baru</h6>
+                                <div class="mb-3">
+                                    <label class="form-label">Nama Kelompok</label>
+                                    <input type="text" class="form-control" name="name" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Deskripsi</label>
+                                    <textarea class="form-control" name="description" rows="2"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Maksimal Anggota</label>
+                                    <input type="number" class="form-control" name="max_members" min="2" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Anggota Kelompok</label>
+                                    <select class="form-select" name="member_ids[]" multiple required>
+                                        <!-- Akan diisi secara dinamis -->
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Tambah Kelompok</button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Daftar Kelompok -->
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">Daftar Kelompok</h6>
+                            <div id="groupsList">
+                                <!-- Akan diisi secara dinamis -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -172,6 +278,254 @@
                 }
             }
         });
+
+        // Fungsi untuk mendapatkan salam berdasarkan waktu
+        function getGreeting() {
+            const hour = new Date().getHours();
+            if (hour >= 3 && hour < 11) return "Selamat Pagi";
+            if (hour >= 11 && hour < 15) return "Selamat Siang";
+            if (hour >= 15 && hour < 18) return "Selamat Sore";
+            return "Selamat Malam";
+        }
+
+        // Ambil data profil saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('token');
+            
+            fetch('/api/v1/profile', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Authorization': `Bearer ${token}`
+                },
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data && data.user && data.user.name) {
+                    // Update nama di welcome message
+                    document.getElementById('teacherName').textContent = data.user.name;
+                    // Update nama di dropdown
+                    document.getElementById('dropdownTeacherName').textContent = data.user.name;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('teacherName').textContent = 'Guru';
+                document.getElementById('dropdownTeacherName').textContent = 'Guru';
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('token');
+            const modal = document.getElementById('editProfileModal');
+            const form = document.getElementById('editProfileForm');
+            const errorMessages = document.getElementById('profileErrorMessages');
+            const errorList = errorMessages.querySelector('ul');
+            const submitBtn = document.getElementById('submitProfileBtn');
+
+            // Isi form saat modal dibuka
+            modal.addEventListener('show.bs.modal', function() {
+                fetch('/api/v1/profile', {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.user) {
+                        document.getElementById('editName').value = data.user.name || '';
+                        document.getElementById('editPhone').value = data.user.phone || '';
+                        document.getElementById('editAddress').value = data.user.address || '';
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+
+            // Reset form dan error messages saat modal ditutup
+            modal.addEventListener('hidden.bs.modal', function() {
+                form.reset();
+                errorMessages.classList.add('d-none');
+                errorList.innerHTML = '';
+            });
+
+            // Handle form submission
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                // Reset error messages
+                errorMessages.classList.add('d-none');
+                errorList.innerHTML = '';
+                
+                // Disable submit button dan tampilkan loading
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
+
+                try {
+                    const formData = new FormData(this);
+                    
+                    const response = await fetch('/api/v1/profile/update', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw data;
+                    }
+
+                    // Tutup modal
+                    bootstrap.Modal.getInstance(modal).hide();
+                    
+                    // Update nama yang ditampilkan
+                    if (data.user && data.user.name) {
+                        document.getElementById('teacherName').textContent = data.user.name;
+                        document.getElementById('dropdownTeacherName').textContent = data.user.name;
+                    }
+
+                    // Tampilkan pesan sukses
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: data.message || 'Profil berhasil diperbarui'
+                    }).then(() => {
+                        // Reload halaman untuk memperbarui semua data
+                        location.reload();
+                    });
+
+                } catch (error) {
+                    errorMessages.classList.remove('d-none');
+                    
+                    if (error.errors) {
+                        Object.values(error.errors).forEach(messages => {
+                            messages.forEach(message => {
+                                errorList.innerHTML += `<li>${message}</li>`;
+                            });
+                        });
+                    } else if (error.message) {
+                        errorList.innerHTML = `<li>${error.message}</li>`;
+                    }
+                } finally {
+                    // Reset submit button
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Simpan Perubahan';
+                }
+            });
+        });
+
+        // Fungsi untuk mengelola kelompok
+        function manageGroups(taskId) {
+            const modal = new bootstrap.Modal(document.getElementById('manageGroupsModal'));
+            
+            // Reset form dan daftar
+            document.getElementById('createGroupForm').reset();
+            document.getElementById('groupsList').innerHTML = 'Loading...';
+            
+            // Load daftar kelompok
+            fetch(`/api/v1/teacher/classes/${classId}/tasks/${taskId}/groups`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                let groupsHtml = '';
+                
+                if (data.length === 0) {
+                    groupsHtml = '<p class="text-muted">Belum ada kelompok</p>';
+                } else {
+                    groupsHtml = '<div class="list-group">';
+                    data.forEach(group => {
+                        groupsHtml += `
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-1">${group.name}</h6>
+                                    <span class="badge bg-primary">${group.members.length}/${group.max_members} Anggota</span>
+                                </div>
+                                <p class="mb-1 text-muted small">${group.description || '-'}</p>
+                                <div class="mt-2">
+                                    <strong class="small">Anggota:</strong>
+                                    <ul class="list-unstyled mb-0">
+                                        ${group.members.map(member => `
+                                            <li class="small">• ${member.name}</li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    groupsHtml += '</div>';
+                }
+                
+                document.getElementById('groupsList').innerHTML = groupsHtml;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('groupsList').innerHTML = 
+                    '<div class="alert alert-danger">Gagal memuat daftar kelompok</div>';
+            });
+            
+            // Handle form submission
+            document.getElementById('createGroupForm').onsubmit = function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                
+                fetch(`/api/v1/teacher/classes/${classId}/tasks/${taskId}/groups`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.errors) {
+                        throw new Error(Object.values(data.errors).flat().join('\n'));
+                    }
+                    
+                    // Refresh daftar kelompok
+                    manageGroups(taskId);
+                    
+                    // Reset form
+                    this.reset();
+                    
+                    // Tampilkan pesan sukses
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Kelompok baru telah ditambahkan',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        text: error.message || 'Gagal menambahkan kelompok'
+                    });
+                });
+            };
+            
+            modal.show();
+        }
     </script>
 </body>
 </html> 

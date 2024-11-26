@@ -41,6 +41,16 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="password_confirmation" class="form-label">Konfirmasi Password</label>
+                        <div class="input-group">
+                            <input type="password" name="password_confirmation" id="password_confirmation" class="form-control" required>
+                            <button class="btn btn-outline-secondary" type="button" id="togglePasswordConfirmation">
+                                <i class="bi bi-eye-slash" id="toggleIconConfirmation"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
                         <button type="submit" class="btn btn-primary w-100" id="submitBtn">
                             Daftar
                         </button>
@@ -71,10 +81,35 @@
             toggleIcon.classList.toggle('bi-eye-slash');
         });
 
-        // Register Form Submit
+        // Toggle Password Visibility (existing code)
+        
+        // Tambahkan toggle untuk konfirmasi password
+        const togglePasswordConfirmation = document.querySelector('#togglePasswordConfirmation');
+        const passwordConfirmation = document.querySelector('#password_confirmation');
+        const toggleIconConfirmation = document.querySelector('#toggleIconConfirmation');
+
+        togglePasswordConfirmation.addEventListener('click', function () {
+            const type = passwordConfirmation.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordConfirmation.setAttribute('type', type);
+            toggleIconConfirmation.classList.toggle('bi-eye');
+            toggleIconConfirmation.classList.toggle('bi-eye-slash');
+        });
+
+        // Tambahkan validasi password match sebelum submit
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
+            const password = document.getElementById('password').value;
+            const passwordConfirmation = document.getElementById('password_confirmation').value;
+            
+            if (password !== passwordConfirmation) {
+                const errorMessages = document.getElementById('error-messages');
+                const errorList = errorMessages.querySelector('ul');
+                errorList.innerHTML = '<li>Password dan konfirmasi password tidak cocok</li>';
+                errorMessages.classList.remove('d-none');
+                return;
+            }
+
             const submitBtn = document.getElementById('submitBtn');
             const errorMessages = document.getElementById('error-messages');
             const errorList = errorMessages.querySelector('ul');
@@ -100,11 +135,8 @@
                     throw data;
                 }
 
-                // Simpan token dan redirect
-                if (data.token) {
-                    localStorage.setItem('token', data.token);
-                    window.location.href = '/dashboard';
-                }
+                // Redirect ke halaman login
+                window.location.href = '/login';
 
             } catch (error) {
                 errorList.innerHTML = '';

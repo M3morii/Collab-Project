@@ -7,6 +7,7 @@ use App\Http\Controllers\API\V1\Teacher\TeacherDashboardController;
 use App\Http\Controllers\API\V1\Teacher\TeacherClassController;
 use App\Models\Task;
 use App\Http\Controllers\API\V1\Admin\ClassManagementController as ClassController;
+use App\Http\Controllers\API\V1\Admin\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -39,7 +40,6 @@ use App\Http\Controllers\API\V1\Admin\ClassManagementController as ClassControll
 
 
 // Admin routes
-Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/dashboard', function () {
         $tasks = Task::orderBy('created_at', 'desc')->get();
         return view('admin.dashboard', compact('tasks'));
@@ -49,10 +49,9 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('/admin/classes', [ClassController::class, 'store'])->name('admin.classes.store');
     Route::put('/admin/classes/{class}', [ClassController::class, 'update'])->name('admin.classes.update');
     Route::delete('/admin/classes/{class}', [ClassController::class, 'destroy'])->name('admin.classes.destroy');
-});
+
 
 // Teacher routes
-Route::middleware(['auth', 'role:teacher'])->group(function () {
     // Dashboard
     Route::get('/teacher/dashboard', [TeacherDashboardController::class, 'index'])->name('teacher.dashboard');
     
@@ -61,5 +60,7 @@ Route::middleware(['auth', 'role:teacher'])->group(function () {
     
     // Tasks
     Route::get('/teacher/classes/{classId}/tasks', [TeacherTaskController::class, 'index'])->name('teacher.tasks.index');
-});
+    Route::get('/teacher/classes/{class}/group', [DashboardController::class, 'group'])->name('teacher.group');
+    Route::post('/teacher/classes/{class}/tasks/{task}/groups', [TeacherTaskController::class, 'createGroup'])->name('teacher.tasks.groups.create');
+    Route::post('/teacher/classes/{classId}/tasks/{taskId}/groups', [TaskController::class, 'createGroup'])->name('teacher.tasks.groups.create');
 
