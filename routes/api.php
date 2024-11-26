@@ -99,5 +99,8 @@ Route::prefix('v1/teacher')->middleware(['auth:sanctum', 'role:teacher'])->group
     Route::post('submissions/{submission}/grade', [SubmissionController::class, 'grade']);
     Route::get('tasks/{task}/submissions', [SubmissionController::class, 'taskSubmissions']);
 });
-// Public registration (student only)
+
 Route::post('v1/register', [AuthController::class, 'register']);
+
+Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('reset-password', [AuthController::class, 'resetPassword']);

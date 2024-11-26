@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Support\Facades\Password;
 
 class AuthService
 {
@@ -58,5 +59,21 @@ class AuthService
     public function logout()
     {
         auth()->user()->tokens()->delete();
+    }
+
+    public function forgotPassword(string $email): void
+    {
+        Password::sendResetLink(['email' => $email]);
+    }
+
+    public function resetPassword(array $data): void
+    {
+        Password::reset(
+            $data,
+            function ($user, $password) {
+                $user->password = Hash::make($password);
+                $user->save();
+            }
+        );
     }
 } 

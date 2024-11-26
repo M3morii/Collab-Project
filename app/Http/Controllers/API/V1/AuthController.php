@@ -116,4 +116,32 @@ class AuthController extends Controller
             ], 500);
         }
     }
+
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email'
+        ]);
+
+        $this->authService->forgotPassword($request->email);
+
+        return response()->json([
+            'message' => 'Password reset link has been sent to your email'
+        ]);
+    }
+
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'token' => 'required|string',
+            'email' => 'required|email|exists:users,email',
+            'password' => 'required|string|min:8|confirmed'
+        ]);
+
+        $this->authService->resetPassword($request->all());
+
+        return response()->json([
+            'message' => 'Password has been successfully reset'
+        ]);
+    }
 } 
