@@ -7,6 +7,8 @@ use App\Models\TaskGroup;
 use App\Models\Task;
 use Illuminate\Http\Request;
 use App\Http\Resources\TaskGroupResource;
+use App\Models\User;
+
 class TaskGroupController extends Controller
 {
     public function index($classId, $taskId)
@@ -67,5 +69,21 @@ class TaskGroupController extends Controller
         $taskGroup->members()->attach($request->member_ids);
 
         return new TaskGroupResource($taskGroup);
+    }
+
+    public function getClassStudents($classId)
+    {
+        // Mengambil data siswa dari kelas menggunakan relasi yang sudah ada
+        $students = User::whereHas('classes', function($query) use ($classId) {
+                $query->where('class_users.class_id', $classId)
+                      ->where('class_users.role', 'student')
+                      ->where('class_users.status', 'active');
+            })
+            ->select('id', 'name', 'email')
+            ->get();
+
+        return response()->json([
+            'data' => $students
+        ]);
     }
 }

@@ -28,7 +28,7 @@ class User extends Authenticatable
     // Ganti Classes menjadi ClassRoom
     public function classes()
     {
-        return $this->belongsToMany(ClassRoom::class, 'class_users')
+        return $this->belongsToMany(ClassRoom::class, 'class_users', 'user_id', 'class_id')
                     ->withPivot('role', 'status')
                     ->withTimestamps();
     }
