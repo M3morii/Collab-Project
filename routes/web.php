@@ -64,3 +64,33 @@ use App\Http\Controllers\API\V1\Admin\DashboardController;
     Route::post('/teacher/classes/{class}/tasks/{task}/groups', [TeacherTaskController::class, 'createGroup'])->name('teacher.tasks.groups.create');
     Route::post('/teacher/classes/{classId}/tasks/{taskId}/groups', [TaskController::class, 'createGroup'])->name('teacher.tasks.groups.create');
 
+
+// Route untuk student dashboard dan kelas
+Route::middleware(['auth', 'role:student'])->group(function () {
+    // Dashboard
+    Route::get('/student/dashboard', function () {
+        return view('student.dashboard');
+    })->name('student.dashboard');
+    
+    // Detail Kelas - Perbaiki parameter
+    Route::get('/student/classes/{classId}', function ($classId) {
+        $class = \App\Models\ClassRoom::findOrFail($classId);
+        
+        // Pastikan siswa adalah anggota kelas
+        if (!$class->students()->where('users.id', auth()->id())->exists()) {
+            abort(403, 'Anda bukan anggota kelas ini.');
+        }
+        
+        return view('student.classes.show', compact('class'));
+    })->name('student.classes.show');
+});
+
+// Pastikan route redirect setelah login sesuai role
+Route::get('/dashboard', function () {
+    if (auth()->user()->role === 'student') {
+        return redirect()->route('student.dashboard');
+    }
+    // Handle role lain jika ada
+    return redirect('/');
+})->middleware(['auth'])->name('dashboard');
+
