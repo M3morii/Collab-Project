@@ -13,7 +13,6 @@ class TaskGroupController extends Controller
 {
     public function index($classId, $taskId)
     {
-        // Validasi task harus bertipe group
         $task = Task::where('class_id', $classId)
             ->findOrFail($taskId);
 
@@ -23,11 +22,16 @@ class TaskGroupController extends Controller
             ], 422);
         }
 
-        $groups = TaskGroup::with('members')
+        $groups = TaskGroup::with(['members' => function($query) {
+                $query->select('users.id', 'users.name');
+            }])
             ->where('task_id', $taskId)
+            ->select('id', 'name', 'description', 'max_members', 'task_id')
             ->get();
 
-        return TaskGroupResource::collection($groups);
+        return response()->json([
+            'data' => $groups
+        ]);
     }
 
     public function store(Request $request, $classId, $taskId)
@@ -71,16 +75,38 @@ class TaskGroupController extends Controller
         return new TaskGroupResource($taskGroup);
     }
 
-    public function getClassStudents($classId)
+    public function getClassStudents($classId, Request $request)
     {
-        // Mengambil data siswa dari kelas menggunakan relasi yang sudah ada
-        $students = User::whereHas('classes', function($query) use ($classId) {
-                $query->where('class_users.class_id', $classId)
-                      ->where('class_users.role', 'student')
-                      ->where('class_users.status', 'active');
-            })
-            ->select('id', 'name', 'email')
-            ->get();
+        // Jika ada task_id di request, filter siswa yang sudah masuk kelompok
+        if ($request->has('task_id')) {
+            // Ambil ID siswa yang sudah masuk kelompok untuk task ini
+            $assignedStudentIds = TaskGroup::where('task_id', $request->task_id)
+                ->with('members')
+                ->get()
+                ->pluck('members')
+                ->flatten()
+                ->pluck('id')
+                ->unique();
+
+            // Ambil siswa yang belum masuk kelompok
+            $students = User::whereHas('classes', function($query) use ($classId) {
+                    $query->where('class_users.class_id', $classId)
+                        ->where('class_users.role', 'student')
+                        ->where('class_users.status', 'active');
+                })
+                ->whereNotIn('id', $assignedStudentIds)
+                ->select('id', 'name', 'email')
+                ->get();
+        } else {
+            // Jika tidak ada task_id, ambil semua siswa
+            $students = User::whereHas('classes', function($query) use ($classId) {
+                    $query->where('class_users.class_id', $classId)
+                        ->where('class_users.role', 'student')
+                        ->where('class_users.status', 'active');
+                })
+                ->select('id', 'name', 'email')
+                ->get();
+        }
 
         return response()->json([
             'data' => $students

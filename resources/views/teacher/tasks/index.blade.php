@@ -108,14 +108,14 @@
                                         </div>
                                         @else
                                         <div class="btn-group">
-                                            <button type="button" class="btn btn-sm btn-info" onclick="viewTask({{ $task->id }})" title="Lihat Detail">
+                                            <button type="button" class="btn btn-sm btn-info" onclick="viewTask({{ $task->id }})">
                                                 <i class="bi bi-eye"></i>
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-warning" onclick="editTask({{ $task->id }})" title="Edit">
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="editTask({{ $task->id }})">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-danger" onclick="deleteTask({{ $task->id }})" title="Hapus">
-                                                <i class="bi bi-trash"></i>
+                                            <button type="button" class="btn btn-sm btn-success" onclick="viewSubmissions({{ $task->id }})">
+                                                <i class="bi bi-file-earmark-check"></i> Submission
                                             </button>
                                         </div>
                                         @endif
@@ -297,6 +297,75 @@
         </div>
     </div>
 
+    <!-- Modal Submission -->
+    <div class="modal fade" id="submissionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Daftar Submission</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Siswa</th>
+                                    <th>Waktu Pengumpulan</th>
+                                    <th>Status</th>
+                                    <th>Nilai</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="submissionList">
+                                <tr>
+                                    <td colspan="5" class="text-center">Memuat data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nilai Submission -->
+    <div class="modal fade" id="gradeSubmissionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nilai Submission</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="gradeSubmissionForm">
+                        <input type="hidden" id="submissionId" name="submission_id">
+                        <div class="mb-3">
+                            <label class="form-label">Siswa</label>
+                            <input type="text" class="form-control" id="studentName" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">File Submission</label>
+                            <div id="submissionFiles"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nilai</label>
+                            <input type="number" class="form-control" name="score" min="0" max="100" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Komentar</label>
+                            <textarea class="form-control" name="feedback" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                    <button type="button" class="btn btn-primary" onclick="submitGrade()">Simpan Nilai</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
@@ -414,14 +483,14 @@
                                     </div>
                                     @else
                                     <div class="btn-group">
-                                        <button type="button" class="btn btn-sm btn-info" onclick="viewTask(${task.id})" title="Lihat Detail">
+                                        <button type="button" class="btn btn-sm btn-info" onclick="viewTask(${task.id})">
                                             <i class="bi bi-eye"></i>
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-warning" onclick="editTask(${task.id})" title="Edit">
+                                        <button type="button" class="btn btn-sm btn-primary" onclick="editTask(${task.id})">
                                             <i class="bi bi-pencil"></i>
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-danger" onclick="deleteTask(${task.id})" title="Hapus">
-                                            <i class="bi bi-trash"></i>
+                                        <button type="button" class="btn btn-sm btn-success" onclick="viewSubmissions(${task.id})">
+                                            <i class="bi bi-file-earmark-check"></i> Submission
                                         </button>
                                     </div>
                                     @endif
@@ -661,17 +730,18 @@
     function createGroup(taskId) {
         document.getElementById('taskIdInput').value = taskId;
         
-        // Load daftar siswa yang tersedia
+        // Load daftar siswa yang belum masuk kelompok
         $.ajax({
-            url: `/api/v1/teacher/classes/${classId}/tasks/${taskId}/available-students`,
+            url: `/api/v1/teacher/classes/${classId}/students`,
             method: 'GET',
+            data: { task_id: taskId }, // Tambahkan task_id ke request
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
             success: function(response) {
                 let html = '';
-                if (response.students && response.students.length > 0) {
-                    response.students.forEach(student => {
+                if (response.data && response.data.length > 0) {
+                    response.data.forEach(student => {
                         html += `
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" 
@@ -704,24 +774,38 @@
 
     function listGroups(taskId) {
         const modal = new bootstrap.Modal(document.getElementById('listGroupsModal'));
-        document.getElementById('groupsList').innerHTML = 'Loading...';
+        document.getElementById('groupsList').innerHTML = `
+            <div class="text-center py-3">
+                <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <span class="ms-2">Memuat daftar kelompok...</span>
+            </div>
+        `;
         
-        fetch(`/api/v1/tasks/${taskId}/groups`)
-            .then(response => response.json())
-            .then(data => {
+        $.ajax({
+            url: `/api/v1/teacher/classes/${classId}/tasks/${taskId}/groups`,
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
                 let html = '<div class="list-group">';
-                if (data.groups && data.groups.length > 0) {
-                    data.groups.forEach(group => {
+                if (response.data && response.data.length > 0) {
+                    response.data.forEach(group => {
                         html += `
                             <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-1">${group.name}</h6>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">${group.name}</h6>
                                     <span class="badge bg-primary">${group.members ? group.members.length : 0} Anggota</span>
                                 </div>
-                                <p class="mb-1 text-muted small">${group.description || '-'}</p>
-                                <div class="mt-2">
+                                <div class="mb-2">
+                                    <strong class="small">Deskripsi:</strong>
+                                    <p class="mb-1 text-muted small">${group.description || '-'}</p>
+                                </div>
+                                <div>
                                     <strong class="small">Anggota:</strong>
-                                    <ul class="list-unstyled mb-0">
+                                    <ul class="list-unstyled mb-0 mt-1">
                                         ${group.members ? group.members.map(member => `
                                             <li class="small">• ${member.name}</li>
                                         `).join('') : ''}
@@ -731,16 +815,20 @@
                         `;
                     });
                 } else {
-                    html = '<p class="text-muted">Belum ada kelompok</p>';
+                    html = '<div class="alert alert-info">Belum ada kelompok yang dibuat</div>';
                 }
                 html += '</div>';
                 document.getElementById('groupsList').innerHTML = html;
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('groupsList').innerHTML = 
-                    '<div class="alert alert-danger">Gagal memuat data kelompok</div>';
-            });
+            },
+            error: function(xhr) {
+                console.error('Error:', xhr);
+                document.getElementById('groupsList').innerHTML = `
+                    <div class="alert alert-danger">
+                        Gagal memuat data kelompok: ${xhr.responseJSON?.message || 'Terjadi kesalahan'}
+                    </div>
+                `;
+            }
+        });
         
         modal.show();
     }
@@ -863,6 +951,225 @@
 
     function submitAssignMembers() {
         // Implementasi assign siswa ke kelompok
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const token = localStorage.getItem('token');
+        
+        fetch('/api/v1/profile', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Authorization': `Bearer ${token}`
+            },
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data && data.user && data.user.name) {
+                // Update nama di dropdown
+                document.getElementById('dropdownTeacherName').textContent = data.user.name;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('dropdownTeacherName').textContent = 'Guru';
+        });
+    });
+
+    function viewSubmissions(taskId) {
+        const modal = new bootstrap.Modal(document.getElementById('submissionModal'));
+        
+        $.ajax({
+            url: `/api/v1/teacher/tasks/${taskId}/submissions`,
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                let html = '';
+                if (response.data && response.data.length > 0) {
+                    response.data.forEach(submission => {
+                        const submissionDate = new Date(submission.submitted_at).toLocaleString('id-ID');
+                        const statusBadge = getStatusBadge(submission.status);
+                        
+                        html += `
+                            <tr>
+                                <td>${submission.user.name}</td>
+                                <td>${submissionDate}</td>
+                                <td>${statusBadge}</td>
+                                <td>${submission.score || '-'}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-info" onclick="viewSubmissionDetail(${submission.id})">
+                                            <i class="bi bi-eye"></i> Detail
+                                        </button>
+                                        <button class="btn btn-sm btn-primary" onclick="gradeSubmission(${submission.id}, '${submission.user.name}')">
+                                            <i class="bi bi-pencil-square"></i> Nilai
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    html = '<tr><td colspan="5" class="text-center">Belum ada submission</td></tr>';
+                }
+                $('#submissionList').html(html);
+            },
+            error: function(xhr) {
+                $('#submissionList').html(`
+                    <tr>
+                        <td colspan="5" class="text-center text-danger">
+                            Gagal memuat data: ${xhr.responseJSON?.message || 'Terjadi kesalahan'}
+                        </td>
+                    </tr>
+                `);
+            }
+        });
+        
+        modal.show();
+    }
+
+    function getStatusBadge(status) {
+        const badges = {
+            'submitted': '<span class="badge bg-warning">Belum Dinilai</span>',
+            'graded': '<span class="badge bg-success">Sudah Dinilai</span>',
+            'revision_needed': '<span class="badge bg-danger">Perlu Revisi</span>'
+        };
+        return badges[status] || '<span class="badge bg-secondary">Unknown</span>';
+    }
+
+    function viewSubmissionDetail(submissionId) {
+        $.ajax({
+            url: `/api/v1/teacher/submissions/${submissionId}`,
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                const submission = response.data;
+                Swal.fire({
+                    title: 'Detail Submission',
+                    html: `
+                        <div class="text-start">
+                            <p><strong>Siswa:</strong> ${submission.user.name}</p>
+                            <p><strong>Waktu Pengumpulan:</strong> ${new Date(submission.submitted_at).toLocaleString('id-ID')}</p>
+                            <p><strong>Status:</strong> ${getStatusBadge(submission.status)}</p>
+                            <p><strong>Nilai:</strong> ${submission.score || '-'}</p>
+                            <p><strong>Feedback:</strong> ${submission.feedback || '-'}</p>
+                            ${submission.content ? `<p><strong>Konten:</strong><br>${submission.content}</p>` : ''}
+                            ${submission.attachments && submission.attachments.length > 0 ? `
+                                <p><strong>Lampiran:</strong></p>
+                                <ul class="list-unstyled">
+                                    ${submission.attachments.map(file => `
+                                        <li><a href="/storage/${file.path}" target="_blank" class="btn btn-sm btn-outline-primary mb-1">
+                                            <i class="bi bi-file-earmark"></i> ${file.original_name}
+                                        </a></li>
+                                    `).join('')}
+                                </ul>
+                            ` : ''}
+                        </div>
+                    `,
+                    width: '600px'
+                });
+            },
+            error: function(xhr) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal!',
+                    text: 'Gagal memuat detail submission: ' + (xhr.responseJSON?.message || 'Terjadi kesalahan')
+                });
+            }
+        });
+    }
+
+    function gradeSubmission(submissionId, studentName) {
+        const modal = new bootstrap.Modal(document.getElementById('gradeSubmissionModal'));
+        
+        $('#gradeSubmissionForm')[0].reset();
+        $('#submissionId').val(submissionId);
+        $('#studentName').val(studentName);
+        
+        $.ajax({
+            url: `/api/v1/teacher/submissions/${submissionId}`,
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                const submission = response.data;
+                
+                // Tampilkan file submission jika ada
+                let filesHtml = '';
+                if (submission.attachments && submission.attachments.length > 0) {
+                    filesHtml = submission.attachments.map(file => `
+                        <div class="mb-2">
+                            <a href="/storage/${file.path}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-file-earmark"></i> ${file.original_name}
+                            </a>
+                        </div>
+                    `).join('');
+                } else {
+                    filesHtml = '<p class="text-muted mb-0">Tidak ada file</p>';
+                }
+                $('#submissionFiles').html(filesHtml);
+                
+                // Isi nilai dan feedback jika sudah ada
+                if (submission.score) {
+                    $('input[name="score"]').val(submission.score);
+                }
+                if (submission.feedback) {
+                    $('textarea[name="feedback"]').val(submission.feedback);
+                }
+            }
+        });
+        
+        modal.show();
+    }
+
+    function submitGrade() {
+        const submissionId = $('#submissionId').val();
+        const formData = new FormData($('#gradeSubmissionForm')[0]);
+        formData.append('status', 'graded'); // Sesuai dengan validasi di controller
+        
+        $.ajax({
+            url: `/api/v1/teacher/submissions/${submissionId}/grade`,
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                $('#gradeSubmissionModal').modal('hide');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: response.message || 'Nilai berhasil disimpan',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    // Refresh daftar submission
+                    viewSubmissions(response.data.task_id);
+                });
+            },
+            error: function(xhr) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal!',
+                    text: xhr.responseJSON?.message || 'Gagal menyimpan nilai'
+                });
+            }
+        });
     }
     </script>
 </body>
