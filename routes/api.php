@@ -92,7 +92,7 @@ Route::prefix('v1/teacher')->middleware(['auth:sanctum', 'role:teacher'])->group
     // Task Groups
     Route::get('classes/{classId}/tasks/{taskId}/groups', [TaskGroupController::class, 'index']);
     Route::post('classes/{classId}/tasks/{taskId}/groups', [TaskGroupController::class, 'store']);
-    
+    Route::get('classes/{classId}/students', [TaskGroupController::class, 'getClassStudents']);
     // Submissions & Grading
     Route::get('submissions', [SubmissionController::class, 'index']);
     Route::get('submissions/{submission}', [SubmissionController::class, 'show']);
