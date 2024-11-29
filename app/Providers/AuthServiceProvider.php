@@ -2,41 +2,18 @@
 
 namespace App\Providers;
 
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
-use Illuminate\Support\Facades\Gate;
-use App\Models\{
-    User,
-    ClassRoom,
-    Task,
-    TaskGroup,
-    Submission,
-    TaskAttachment,
-    SubmissionAttachment
-};
-use App\Policies\{
-    UserPolicy,
-    ClassPolicy,
-    TaskPolicy,
-    TaskGroupPolicy,
-    SubmissionPolicy,
-    AttachmentPolicy
-};
 
 class AuthServiceProvider extends ServiceProvider
 {
     /**
-     * The model to policy mappings for the application.
+     * The policy mappings for the application.
      *
      * @var array<class-string, class-string>
      */
     protected $policies = [
-        User::class => UserPolicy::class,
-        ClassRoom::class => ClassPolicy::class,
-        Task::class => TaskPolicy::class,
-        TaskGroup::class => TaskGroupPolicy::class,
-        Submission::class => SubmissionPolicy::class,
-        TaskAttachment::class => AttachmentPolicy::class,
-        SubmissionAttachment::class => AttachmentPolicy::class,
+        // 'App\Models\Model' => 'App\Policies\ModelPolicy',
     ];
 
     /**
@@ -46,17 +23,10 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        // Define gates for specific actions
-        Gate::define('manage-class', function (User $user) {
-            return in_array($user->role, ['admin', 'teacher']);
+        ResetPassword::createUrlUsing(function (object $notifiable, string $token) {
+            return config('app.frontend_url')."/password-reset/$token?email={$notifiable->getEmailForPasswordReset()}";
         });
 
-        Gate::define('submit-task', function (User $user) {
-            return $user->role === 'student';
-        });
-
-        Gate::define('grade-submission', function (User $user) {
-            return in_array($user->role, ['admin', 'teacher']);
-        });
+        //
     }
 }

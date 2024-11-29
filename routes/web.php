@@ -4,7 +4,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\V1\AuthController;
 use App\Http\Controllers\API\V1\Teacher\TaskController as TeacherTaskController;
 use App\Http\Controllers\API\V1\Teacher\TeacherDashboardController;
-use App\Http\Controllers\API\V1\Teacher\TeacherClassController;
 use App\Models\Task;
 use App\Http\Controllers\API\V1\Admin\ClassManagementController as ClassController;
 use App\Http\Controllers\API\V1\Admin\DashboardController;
@@ -66,7 +65,7 @@ use App\Http\Controllers\API\V1\Admin\DashboardController;
 
 
 // Route untuk student dashboard dan kelas
-Route::middleware(['auth', 'role:student'])->group(function () {
+
     // Dashboard
     Route::get('/student/dashboard', function () {
         return view('student.dashboard');
@@ -83,7 +82,6 @@ Route::middleware(['auth', 'role:student'])->group(function () {
         
         return view('student.classes.show', compact('class'));
     })->name('student.classes.show');
-});
 
 // Pastikan route redirect setelah login sesuai role
 Route::get('/dashboard', function () {
