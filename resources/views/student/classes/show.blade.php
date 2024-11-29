@@ -116,10 +116,54 @@
                         <label class="fw-bold">Lampiran:</label>
                         <div id="modalTaskAttachments">Loading...</div>
                     </div>
+                    
+                    <div class="mt-4">
+                        <h6 class="mb-3">Pengumpulan Tugas</h6>
+                        <div id="submissionStatus">
+                            <!-- Status akan diisi melalui JavaScript -->
+                        </div>
+                        
+                        <form id="submitTaskForm" enctype="multipart/form-data" class="mt-3">
+                            <input type="hidden" id="taskIdInput" name="task_id">
+                            <div class="mb-3">
+                                <label class="form-label">File Tugas</label>
+                                <input type="file" class="form-control" name="submission_files[]" multiple required>
+                                <small class="text-muted">Anda dapat memilih lebih dari satu file</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Catatan (opsional)</label>
+                                <textarea class="form-control" name="notes" rows="3"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Kumpulkan</button>
+                        </form>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-                    <a href="#" id="submitTaskButton" class="btn btn-primary">Kumpulkan Tugas</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tambahkan modal baru untuk nilai -->
+    <div class="modal fade" id="gradeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nilai Tugas</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="gradeModalContent">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
                 </div>
             </div>
         </div>
@@ -130,12 +174,14 @@
     <script>
         // Fungsi untuk melihat detail tugas
         function viewTaskDetail(taskId) {
+            currentTaskId = taskId; // Simpan taskId ke variabel global
+            console.log('Viewing task ID:', taskId); // Debug
+            
             fetch(`/api/v1/student/tasks/${taskId}`, {
                 headers: {
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                credentials: 'include'
+                }
             })
             .then(response => response.json())
             .then(data => {
@@ -174,6 +220,9 @@
                 } else {
                     attachmentsElement.innerHTML = '<p class="text-muted">Tidak ada lampiran</p>';
                 }
+                
+                // Set task ID ke form
+                document.getElementById('taskIdInput').value = taskId;
                 
                 // Show modal
                 const modal = new bootstrap.Modal(document.getElementById('taskDetailModal'));
@@ -234,7 +283,7 @@
                 return response.json();
             })
             .then(data => {
-                console.log('Tasks data:', data); // Debug: lihat struktur data
+                console.log('Tasks data:', data);
                 const tasksContainer = document.getElementById('tasksList');
                 
                 if (data.data.tasks && data.data.tasks.length > 0) {
@@ -251,9 +300,14 @@
                                     <small class="text-muted">
                                         Tipe: ${task.task_type === 'individual' ? 'Individu' : 'Kelompok'}
                                     </small>
-                                    <button class="btn btn-sm btn-primary" onclick="viewTaskDetail(${task.id})">
-                                        Lihat Detail
-                                    </button>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-primary" onclick="viewTaskDetail(${task.id})">
+                                            Lihat Detail
+                                        </button>
+                                        <button class="btn btn-sm btn-info text-white" onclick="viewGrade(${task.id})">
+                                            <i class="bi bi-award"></i> Lihat Nilai
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         `;
@@ -278,10 +332,136 @@
             });
         }
 
+        // Event listener untuk form submit
+        document.getElementById('submitTaskForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const taskId = currentTaskId;
+            console.log('Submitting task ID:', taskId); // Debug
+            
+            if (!taskId) {
+                alert('Task ID tidak valid');
+                return;
+            }
+            
+            const formData = new FormData(this);
+            
+            // Rename file input dari submission_files menjadi attachments
+            const files = formData.getAll('submission_files[]');
+            formData.delete('submission_files[]');
+            files.forEach(file => {
+                formData.append('attachments[]', file);
+            });
+            
+            // Rename notes menjadi description
+            const notes = formData.get('notes');
+            formData.delete('notes');
+            formData.append('description', notes);
+            
+            // Debug: cek isi FormData
+            for (let pair of formData.entries()) {
+                console.log(pair[0] + ': ' + pair[1]);
+            }
+            
+            // Tampilkan loading state
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Mengirim...';
+            
+            fetch(`/api/v1/student/tasks/${taskId}/submissions`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.message || 'Gagal mengumpulkan tugas');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Submit response:', data); // Debug
+                alert('Tugas berhasil dikumpulkan!');
+                bootstrap.Modal.getInstance(document.getElementById('submitTaskModal')).hide();
+                viewTaskDetail(taskId); // Refresh detail tugas
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Gagal mengumpulkan tugas: ' + error.message);
+            })
+            .finally(() => {
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalText;
+            });
+        });
+
         // Panggil fungsi saat halaman dimuat
         document.addEventListener('DOMContentLoaded', function() {
             getClassTasks();
         });
+
+        // Fungsi untuk melihat nilai tugas
+        function viewGrade(taskId) {
+            const gradeModal = new bootstrap.Modal(document.getElementById('gradeModal'));
+            gradeModal.show();
+            
+            fetch(`/api/v1/student/tasks/${taskId}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const taskData = data.data;
+                const gradeContent = document.getElementById('gradeModalContent');
+                
+                if (taskData.submissions && taskData.submissions.length > 0) {
+                    const submission = taskData.submissions[0];
+                    if (submission.grade !== null) {
+                        gradeContent.innerHTML = `
+                            <div class="text-center mb-4">
+                                <div class="display-4 text-primary mb-2">${submission.grade}/${taskData.max_score}</div>
+                                <p class="text-muted">Dinilai pada: ${new Date(submission.graded_at).toLocaleDateString('id-ID')}</p>
+                            </div>
+                            ${submission.feedback ? `
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Feedback Guru:</h6>
+                                        <p class="card-text">${submission.feedback}</p>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        `;
+                    } else {
+                        gradeContent.innerHTML = `
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i> Tugas belum dinilai oleh guru
+                            </div>
+                        `;
+                    }
+                } else {
+                    gradeContent.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> Anda belum mengumpulkan tugas ini
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('gradeModalContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i> Gagal memuat nilai: ${error.message}
+                    </div>
+                `;
+            });
+        }
     </script>
 </body>
 </html> 
