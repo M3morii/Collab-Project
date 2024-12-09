@@ -33,6 +33,11 @@ class Submission extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function student()
+    {
+        return $this->belongsTo(User::class, 'user_id')->where('role', 'student');
+    }
+
     public function taskGroup()
     {
         return $this->belongsTo(TaskGroup::class);
