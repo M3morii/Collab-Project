@@ -39,7 +39,7 @@ use App\Http\Controllers\API\V1\Admin\ClassManagementController as ClassControll
 
 
 // Admin routes
-Route::middleware(['auth', 'role:admin'])->group(function () {
+
     Route::get('/admin/dashboard', function () {
         $tasks = Task::orderBy('created_at', 'desc')->get();
         return view('admin.dashboard', compact('tasks'));
@@ -49,10 +49,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('/admin/classes', [ClassController::class, 'store'])->name('admin.classes.store');
     Route::put('/admin/classes/{class}', [ClassController::class, 'update'])->name('admin.classes.update');
     Route::delete('/admin/classes/{class}', [ClassController::class, 'destroy'])->name('admin.classes.destroy');
-});
 
-// Teacher routes
-Route::middleware(['auth', 'role:teacher'])->group(function () {
+
     // Dashboard
     Route::get('/teacher/dashboard', [TeacherDashboardController::class, 'index'])->name('teacher.dashboard');
     
@@ -61,5 +59,5 @@ Route::middleware(['auth', 'role:teacher'])->group(function () {
     
     // Tasks
     Route::get('/teacher/classes/{classId}/tasks', [TeacherTaskController::class, 'index'])->name('teacher.tasks.index');
-});
+
 
