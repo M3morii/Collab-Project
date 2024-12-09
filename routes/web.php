@@ -60,4 +60,12 @@ use App\Http\Controllers\API\V1\Admin\ClassManagementController as ClassControll
     // Tasks
     Route::get('/teacher/classes/{classId}/tasks', [TeacherTaskController::class, 'index'])->name('teacher.tasks.index');
 
+    Route::get('/student/dashboard', function () {
+        return view('user.dashboard');
+    })->middleware(['auth', 'role:student'])->name('student.dashboard');
+
+    Route::get('/student/classes/{id}', function ($id) {
+        return view('user.class-detail', ['classId' => $id]);
+    })->middleware(['auth', 'role:student'])->name('student.class.detail');
+
 

@@ -80,7 +80,7 @@
                         </thead>
                         <tbody>
                             @forelse($tasks as $task)
-                            <tr>
+                            <tr data-task-id="{{ $task->id }}">
                                 <td>{{ $task->title }}</td>
                                 <td>
                                     <span class="badge bg-{{ $task->task_type === 'individual' ? 'info' : 'warning' }}">
@@ -181,6 +181,69 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
                         <button type="submit" class="btn btn-primary">Simpan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Edit Tugas -->
+    <div class="modal fade" id="editTaskModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Tugas</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editTaskForm">
+                    <input type="hidden" name="task_id">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Judul Tugas</label>
+                            <input type="text" class="form-control" name="title">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Deskripsi</label>
+                            <textarea class="form-control" name="description" rows="3"></textarea>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Tanggal Mulai</label>
+                                <input type="datetime-local" class="form-control" name="start_date">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Tenggat Waktu</label>
+                                <input type="datetime-local" class="form-control" name="deadline">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Tipe Tugas</label>
+                                <select class="form-select" name="task_type">
+                                    <option value="individual">Individu</option>
+                                    <option value="group">Kelompok</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Nilai Maksimal</label>
+                                <input type="number" class="form-control" name="max_score" min="0" max="100">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Bobot (%)</label>
+                                <input type="number" class="form-control" name="weight_percentage" min="0" max="100">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" name="status">
+                                <option value="draft">Draft</option>
+                                <option value="published">Publikasikan</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
                     </div>
                 </form>
             </div>
@@ -440,50 +503,37 @@
         });
     }
 
-    // Fungsi untuk mengedit tugas
+    // Ganti fungsi editTask dengan yang baru
     function editTask(taskId) {
-        Swal.fire({
-            title: 'Memuat...',
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
-
         $.ajax({
             url: `/api/v1/teacher/classes/${classId}/tasks/${taskId}`,
             method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
             success: function(response) {
-                // Debug response
-                console.log('Response:', response);
-                
-                // Pastikan mengakses data dari response yang benar
-                const task = response.data || response; // Menyesuaikan dengan format response API
-                
                 // Isi form edit dengan data yang ada
-                $('#editTaskForm input[name="task_id"]').val(task.id);
-                $('#editTaskForm input[name="title"]').val(task.title);
-                $('#editTaskForm textarea[name="description"]').val(task.description);
+                $('#editTaskForm input[name="task_id"]').val(taskId);
+                $('#editTaskForm input[name="title"]').val(response.title);
+                $('#editTaskForm textarea[name="description"]').val(response.description);
                 
-                // Pastikan data tanggal ada sebelum menggunakan slice
-                if (task.start_date) {
-                    $('#editTaskForm input[name="start_date"]').val(task.start_date.slice(0, 16));
+                // Format tanggal untuk input datetime-local
+                if (response.start_date) {
+                    $('#editTaskForm input[name="start_date"]').val(response.start_date.slice(0, 16));
                 }
-                if (task.deadline) {
-                    $('#editTaskForm input[name="deadline"]').val(task.deadline.slice(0, 16));
+                if (response.deadline) {
+                    $('#editTaskForm input[name="deadline"]').val(response.deadline.slice(0, 16));
                 }
                 
-                $('#editTaskForm select[name="task_type"]').val(task.task_type);
-                $('#editTaskForm input[name="max_score"]').val(task.max_score);
-                $('#editTaskForm input[name="weight_percentage"]').val(task.weight_percentage);
-                $('#editTaskForm select[name="status"]').val(task.status);
+                $('#editTaskForm select[name="task_type"]').val(response.task_type);
+                $('#editTaskForm input[name="max_score"]').val(response.max_score);
+                $('#editTaskForm input[name="weight_percentage"]').val(response.weight_percentage);
+                $('#editTaskForm select[name="status"]').val(response.status);
 
-                Swal.close();
+                // Tampilkan modal
                 $('#editTaskModal').modal('show');
             },
             error: function(xhr) {
-                console.error('Error:', xhr);
                 Swal.fire({
                     title: 'Gagal!',
                     text: 'Gagal memuat data tugas: ' + (xhr.responseJSON?.message || 'Terjadi kesalahan'),
@@ -511,7 +561,7 @@
         
         $.ajax({
             url: `/api/v1/teacher/classes/${classId}/tasks/${taskId}`,
-            method: 'PUT', // Ubah ke PUT untuk update
+            method: 'PUT',
             data: formData,
             processData: false,
             contentType: false,
@@ -520,14 +570,53 @@
             },
             success: function(response) {
                 $('#editTaskModal').modal('hide');
+                
+                // Update tampilan task yang diedit
+                const taskRow = $(`tr[data-task-id="${taskId}"]`);
+                const updatedHtml = `
+                    <td>${response.data.title}</td>
+                    <td>
+                        <span class="badge bg-${response.data.task_type === 'individual' ? 'info' : 'warning'}">
+                            ${response.data.task_type === 'individual' ? 'Individu' : 'Kelompok'}
+                        </span>
+                    </td>
+                    <td>${new Date(response.data.deadline).toLocaleDateString('id-ID', { 
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })}</td>
+                    <td>
+                        <span class="badge bg-${response.data.status === 'published' ? 'success' : 'secondary'}">
+                            ${response.data.status === 'published' ? 'Dipublikasi' : 'Draft'}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-info" 
+                                    onclick="viewTask(${response.data.id})" title="Lihat Detail">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-warning" 
+                                    onclick="editTask(${response.data.id})" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger" 
+                                    onclick="deleteTask(${response.data.id})" title="Hapus">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                taskRow.html(updatedHtml);
+
                 Swal.fire({
                     title: 'Berhasil!',
                     text: 'Tugas telah diperbarui',
                     icon: 'success',
                     timer: 1500,
                     showConfirmButton: false
-                }).then(() => {
-                    location.reload();
                 });
             },
             error: function(xhr) {
