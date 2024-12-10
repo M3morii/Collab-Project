@@ -18,11 +18,7 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="#">
-                            <i class="bi bi-house-door"></i> Beranda
-                        </a>
-                    </li>
+                    <!-- Tombol beranda dihapus dari sini -->
                 </ul>
                 <div class="d-flex">
                     <div class="dropdown">

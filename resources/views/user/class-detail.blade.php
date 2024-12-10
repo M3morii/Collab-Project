@@ -138,6 +138,11 @@
                                 minute: '2-digit'
                             });
 
+                            // Cek status tugas
+                            const isSubmitted = task.status === 'submitted' || 
+                                              (new URLSearchParams(window.location.search).get('taskId') == task.id && 
+                                               new URLSearchParams(window.location.search).get('status') === 'submitted');
+                            
                             html += `
                                 <div class="card mb-2">
                                     <div class="card-body">
@@ -152,9 +157,15 @@
                                                 </small>
                                             </div>
                                             <div>
-                                                <a href="/student/tasks/${task.id}" class="btn btn-primary btn-sm">
-                                                    <i class="bi bi-pencil-square"></i> Kerjakan Tugas
-                                                </a>
+                                                ${isSubmitted ? 
+                                                    `<span class="badge bg-success">
+                                                        <i class="bi bi-check-circle"></i> Sudah Dikumpulkan
+                                                     </span>` :
+                                                    `<a href="/student/tasks/${task.id}?classId=${classId}" 
+                                                        class="btn btn-primary btn-sm">
+                                                        <i class="bi bi-pencil-square"></i> Kerjakan Tugas
+                                                    </a>`
+                                                }
                                             </div>
                                         </div>
                                     </div>
@@ -171,6 +182,20 @@
                     }
 
                     $('#tasksList').html(html);
+
+                    // Tampilkan notifikasi jika baru selesai mengumpulkan
+                    const status = new URLSearchParams(window.location.search).get('status');
+                    if (status === 'submitted') {
+                        Swal.fire({
+                            title: 'Tugas Berhasil Dikumpulkan!',
+                            text: 'Terima kasih telah mengerjakan tugas',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        // Bersihkan parameter URL
+                        window.history.replaceState({}, document.title, `/student/classes/${classId}`);
+                    }
                 },
                 error: function(xhr) {
                     $('#tasksList').html(`

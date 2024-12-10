@@ -68,4 +68,16 @@ use App\Http\Controllers\API\V1\Admin\ClassManagementController as ClassControll
         return view('user.class-detail', ['classId' => $id]);
     })->middleware(['auth', 'role:student'])->name('student.class.detail');
 
+    // Route untuk detail tugas siswa
+    Route::get('/student/tasks/{taskId}', function($taskId) {
+        return view('user.task-detail', [
+            'taskId' => $taskId,
+            'classId' => request()->query('classId')  // mengambil classId dari query parameter
+        ]);
+    })->name('student.task.detail');
+
+    // Route untuk mengumpulkan jawaban tugas
+    Route::post('/student/tasks/{taskId}/submit', [App\Http\Controllers\Student\TaskController::class, 'submit'])
+        ->name('student.task.submit');
+
 
