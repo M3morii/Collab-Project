@@ -10,6 +10,10 @@ use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Auth\Events\Registered;
+
 class AuthController extends Controller
 {
     protected $authService;
@@ -19,13 +23,31 @@ class AuthController extends Controller
         $this->authService = $authService;
     }
 
-    public function register(RegisterRequest $request): JsonResponse
+    public function register(Request $request)
     {
-        $result = $this->authService->register($request->validated());
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => 'student', // atau sesuai kebutuhan
+        ]);
+
+        // Kirim email verifikasi
+        event(new Registered($user));
+
+        // Generate token
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'message' => 'Registration successful',
-            'user' => new UserResource($result['user']),
+            'message' => 'Registrasi berhasil! Silakan cek email Anda untuk verifikasi.',
+            'user' => $user,
+            'token' => $token,
         ], 201);
     }
 

@@ -7,14 +7,16 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'name', 'email', 'password', 'role',
-        'avatar', 'phone', 'address', 'is_active'
+        'avatar', 'phone', 'address', 'is_active',
+        'email_verified_at'
     ];
 
     protected $hidden = ['password', 'remember_token'];

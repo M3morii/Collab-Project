@@ -17,13 +17,15 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
+            $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->enum('role', ['admin', 'teacher', 'student']);
             $table->string('avatar')->nullable();
             $table->string('phone')->nullable();
             $table->text('address')->nullable();
             $table->boolean('is_active')->default(true);
-            $table->softDeletes();  // Untuk deleted_at
+            $table->rememberToken();  // Untuk remember_token
+            $table->softDeletes();    // Untuk deleted_at
             $table->timestamps();
         });
     }
