@@ -63,12 +63,16 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         });
 
         // Admin Routes
-        Route::prefix('admin')->middleware(['role:admin'])->group(function () {
+        Route::prefix('admin')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
             // Dashboard Overview
             Route::get('dashboard/overview', [DashboardController::class, 'overview']);
             
             // User Management
-            Route::apiResource('users', UserManagementController::class);
+            Route::get('users', [UserManagementController::class, 'index']);
+            Route::post('users', [UserManagementController::class, 'store']);
+            Route::get('users/{id}', [UserManagementController::class, 'show']);
+            Route::put('users/{id}', [UserManagementController::class, 'update']);
+            Route::delete('users/{id}', [UserManagementController::class, 'destroy']);
             Route::patch('users/{user}/status', [UserManagementController::class, 'updateStatus']);
             Route::get('users/teachers', [UserManagementController::class, 'getTeachers']);
             Route::get('users/students', [UserManagementController::class, 'getStudents']);
@@ -76,9 +80,11 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
             // Class Management
             Route::get('classes', [ClassManagementController::class, 'index']);
             Route::post('classes', [ClassManagementController::class, 'store']);
-            Route::get('classes/{classId}', [ClassManagementController::class, 'show']);
-            Route::put('classes/{classId}', [ClassManagementController::class, 'update']);
-            Route::delete('classes/{classId}', [ClassManagementController::class, 'destroy']);
+            Route::get('classes/{id}', [ClassManagementController::class, 'show']);
+            Route::put('classes/{id}', [ClassManagementController::class, 'update']);
+            Route::delete('classes/{id}', [ClassManagementController::class, 'destroy']);
+            
+            // Class Assignment
             Route::post('classes/{classId}/assign-teacher', [ClassManagementController::class, 'assignTeacher']);
             Route::post('classes/{classId}/assign-students', [ClassManagementController::class, 'assignStudents']);
             Route::delete('classes/{classId}/teacher', [ClassManagementController::class, 'removeTeacher']);

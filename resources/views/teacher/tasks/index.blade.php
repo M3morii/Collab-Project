@@ -33,7 +33,8 @@
                 <div class="d-flex">
                     <div class="dropdown">
                         <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i> {{ auth()->user()->name }}
+                            <i class="bi bi-person-circle"></i> 
+                            <span id="userName">Loading...</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li>
@@ -294,109 +295,110 @@
         });
     }
 
-    // Load tasks saat halaman dimuat
-    function loadTasks() {
+    // Fungsi untuk mendapatkan daftar tugas
+    function getTasks() {
+        const token = getToken();
+        if (!token) {
+            Swal.fire('Error', 'Sesi telah berakhir, silakan login kembali', 'error');
+            return;
+        }
+
         $.ajax({
             url: `/api/v1/teacher/classes/${classId}/tasks`,
             method: 'GET',
             headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json',
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
             success: function(response) {
-                // Debug response
-                console.log('Response:', response);
-                
-                // Ambil tasks dari response yang sesuai dengan TaskController
-                const tasks = response; // karena TaskController langsung return tasks
-                
-                let tasksHtml = '';
-                
-                if (!tasks || tasks.length === 0) {
-                    tasksHtml = `
-                        <div class="text-center py-5">
-                            <i class="bi bi-clipboard-x fs-1 text-muted"></i>
-                            <p class="mt-3">Belum ada tugas di kelas ini</p>
-                        </div>
-                    `;
-                } else {
-                    tasksHtml = `
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Judul</th>
-                                        <th>Tipe</th>
-                                        <th>Tenggat</th>
-                                        <th>Status</th>
-                                        <th>Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                    `;
-                    
-                    tasks.forEach(task => {
-                        tasksHtml += `
-                            <tr>
-                                <td>${task.title}</td>
-                                <td>
-                                    <span class="badge bg-${task.task_type === 'individual' ? 'info' : 'warning'}">
-                                        ${task.task_type === 'individual' ? 'Individu' : 'Kelompok'}
-                                    </span>
-                                </td>
-                                <td>${new Date(task.deadline).toLocaleDateString('id-ID', { 
-                                    day: '2-digit',
-                                    month: 'short',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                })}</td>
-                                <td>
-                                    <span class="badge bg-${task.status === 'published' ? 'success' : 'secondary'}">
-                                        ${task.status === 'published' ? 'Dipublikasi' : 'Draft'}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="btn-group">
-                                        <button type="button" class="btn btn-sm btn-info" 
-                                                onclick="viewTask(${task.id})" title="Lihat Detail">
-                                            <i class="bi bi-eye"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-warning" 
-                                                onclick="editTask(${task.id})" title="Edit">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-danger" 
-                                                onclick="deleteTask(${task.id})" title="Hapus">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-                    });
-                    
-                    tasksHtml += `
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
-                }
-                
-                $('.card-body').html(tasksHtml);
+                // Update tabel dengan data tugas
+                updateTaskTable(response.data);
             },
             error: function(xhr) {
                 console.error('Error:', xhr);
-                alert('Gagal memuat daftar tugas');
+                Swal.fire({
+                    title: 'Gagal!',
+                    text: 'Gagal memuat daftar tugas: ' + (xhr.responseJSON?.message || 'Terjadi kesalahan'),
+                    icon: 'error'
+                });
             }
         });
     }
 
-    // Load tasks saat halaman dimuat
-    loadTasks();
+    // Panggil getTasks saat halaman dimuat
+    $(document).ready(function() {
+        getTasks();
+    });
+
+    // Fungsi untuk update tabel tugas
+    function updateTaskTable(tasks) {
+        const tbody = $('table tbody');
+        tbody.empty();
+
+        if (tasks.length === 0) {
+            tbody.html(`
+                <tr>
+                    <td colspan="5" class="text-center py-5">
+                        <i class="bi bi-clipboard-x fs-1 text-muted"></i>
+                        <p class="mt-3">Belum ada tugas di kelas ini</p>
+                    </td>
+                </tr>
+            `);
+            return;
+        }
+
+        tasks.forEach(task => {
+            tbody.append(`
+                <tr data-task-id="${task.id}">
+                    <td>${task.title}</td>
+                    <td>
+                        <span class="badge bg-${task.task_type === 'individual' ? 'info' : 'warning'}">
+                            ${task.task_type === 'individual' ? 'Individu' : 'Kelompok'}
+                        </span>
+                    </td>
+                    <td>${new Date(task.deadline).toLocaleDateString('id-ID', { 
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })}</td>
+                    <td>
+                        <span class="badge bg-${task.status === 'published' ? 'success' : 'secondary'}">
+                            ${task.status === 'published' ? 'Dipublikasi' : 'Draft'}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-info" 
+                                    onclick="viewTask(${task.id})" title="Lihat Detail">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-warning" 
+                                    onclick="editTask(${task.id})" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger" 
+                                    onclick="deleteTask(${task.id})" title="Hapus">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `);
+        });
+    }
 
     // Handle form submit untuk membuat tugas baru
     $('#createTaskForm').on('submit', function(e) {
         e.preventDefault();
+        
+        const token = getToken();
+        if (!token) {
+            Swal.fire('Error', 'Sesi telah berakhir, silakan login kembali', 'error');
+            return;
+        }
         
         let formData = new FormData(this);
         
@@ -418,6 +420,8 @@
             processData: false,
             contentType: false,
             headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json',
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
             success: function(response) {
@@ -444,6 +448,12 @@
 
     // Fungsi untuk melihat detail tugas
     function viewTask(taskId) {
+        const token = getToken();
+        if (!token) {
+            Swal.fire('Error', 'Sesi telah berakhir, silakan login kembali', 'error');
+            return;
+        }
+
         Swal.fire({
             title: 'Memuat...',
             allowOutsideClick: false,
@@ -456,6 +466,11 @@
         $.ajax({
             url: `/api/v1/teacher/classes/${classId}/tasks/${taskId}`,
             method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
             success: function(response) {
                 // Debug response
                 console.log('Response:', response);
@@ -503,12 +518,20 @@
         });
     }
 
-    // Ganti fungsi editTask dengan yang baru
+    // Fungsi untuk edit tugas
     function editTask(taskId) {
+        const token = getToken();
+        if (!token) {
+            Swal.fire('Error', 'Sesi telah berakhir, silakan login kembali', 'error');
+            return;
+        }
+
         $.ajax({
             url: `/api/v1/teacher/classes/${classId}/tasks/${taskId}`,
             method: 'GET',
             headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json',
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
             success: function(response) {
@@ -547,17 +570,11 @@
     $('#editTaskForm').on('submit', function(e) {
         e.preventDefault();
         
+        const token = getToken();
+        if (!token) return;
+        
         let formData = new FormData(this);
         let taskId = formData.get('task_id');
-        
-        Swal.fire({
-            title: 'Memproses...',
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
         
         $.ajax({
             url: `/api/v1/teacher/classes/${classId}/tasks/${taskId}`,
@@ -566,6 +583,8 @@
             processData: false,
             contentType: false,
             headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json',
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
             success: function(response) {
@@ -627,6 +646,28 @@
                 });
             }
         });
+    });
+
+    // Tambahkan script untuk mengambil data profile
+    document.addEventListener('DOMContentLoaded', async function() {
+        try {
+            const response = await fetch('/api/v1/profile', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('userName').textContent = data.user.name;
+            } else {
+                document.getElementById('userName').textContent = 'Error loading name';
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('userName').textContent = 'Error loading name';
+        }
     });
     </script>
 </body>

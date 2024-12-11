@@ -477,9 +477,13 @@
 
         // Fungsi untuk detail kelas
         async function detailClass(id) {
+            const token = getToken();
+            if (!token) return;
+
             try {
                 const response = await fetch(`/api/v1/admin/classes/${id}`, {
                     headers: {
+                        'Authorization': `Bearer ${token}`,
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                     }
@@ -525,9 +529,13 @@
 
         // Fungsi untuk edit kelas
         async function editClass(id) {
+            const token = getToken();
+            if (!token) return;
+
             try {
                 const response = await fetch(`/api/v1/admin/classes/${id}`, {
                     headers: {
+                        'Authorization': `Bearer ${token}`,
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                     }

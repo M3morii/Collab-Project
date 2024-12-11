@@ -27,7 +27,8 @@
                 <div class="d-flex">
                     <div class="dropdown">
                         <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i> {{ auth()->user()->name }}
+                            <i class="bi bi-person-circle"></i> 
+                            <span id="userName">Loading...</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li>
@@ -48,7 +49,7 @@
         <!-- Welcome Card -->
         <div class="card mb-4">
             <div class="card-body">
-                <h5 class="card-title">Selamat Datang, {{ auth()->user()->name }}!</h5>
+                <h5 class="card-title">Selamat Datang, <span id="welcomeUserName">Loading...</span>!</h5>
                 <p class="card-text">Berikut adalah ringkasan kelas anda.</p>
             </div>
         </div>
@@ -170,6 +171,33 @@
                     // Jika terjadi error, tetap redirect ke login
                     window.location.href = '/login';
                 }
+            }
+        });
+
+        // Tambahkan script untuk mengambil data profile
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                const response = await fetch('/api/v1/profile', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('userName').textContent = data.user.name;
+                    document.getElementById('welcomeUserName').textContent = data.user.name;
+                } else {
+                    const errorText = 'Error loading name';
+                    document.getElementById('userName').textContent = errorText;
+                    document.getElementById('welcomeUserName').textContent = errorText;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                const errorText = 'Error loading name';
+                document.getElementById('userName').textContent = errorText;
+                document.getElementById('welcomeUserName').textContent = errorText;
             }
         });
     </script>
