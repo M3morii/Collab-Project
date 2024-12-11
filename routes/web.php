@@ -62,11 +62,11 @@ use App\Http\Controllers\API\V1\Admin\ClassManagementController as ClassControll
 
     Route::get('/student/dashboard', function () {
         return view('user.dashboard');
-    })->middleware(['auth', 'role:student'])->name('student.dashboard');
+    })->name('student.dashboard');
 
     Route::get('/student/classes/{id}', function ($id) {
         return view('user.class-detail', ['classId' => $id]);
-    })->middleware(['auth', 'role:student'])->name('student.class.detail');
+    })->name('student.class.detail');
 
     // Route untuk detail tugas siswa
     Route::get('/student/tasks/{taskId}', function($taskId) {
