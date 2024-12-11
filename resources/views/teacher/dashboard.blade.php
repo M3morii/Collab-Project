@@ -133,6 +133,121 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Tambahkan console.log untuk debugging
+        console.log('Script loaded');
+
+        // Fungsi untuk mendapatkan token
+        function getToken() {
+            return localStorage.getItem('token');
+        }
+
+        // Fungsi untuk mendapatkan profile
+        async function getProfile() {
+            const token = getToken();
+            try {
+                const response = await fetch('/api/v1/profile', {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('userName').textContent = data.user.name;
+                    document.getElementById('welcomeUserName').textContent = data.user.name;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // Fungsi untuk mendapatkan assigned classes
+        async function getAssignedClasses() {
+            const token = getToken();
+            try {
+                const response = await fetch('/api/v1/teacher/classes', {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Classes:', data);
+                    updateDashboardStats(data.data);
+                    updateRecentClasses(data.data);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // Panggil kedua fungsi saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', function() {
+            getProfile();
+            getAssignedClasses();
+        });
+
+        // Fungsi untuk update statistik dashboard
+        function updateDashboardStats(classes) {
+            const totalClasses = classes.length;
+            const activeClasses = classes.filter(c => c.status === 'active').length;
+            const totalStudents = classes.reduce((total, c) => total + (c.students?.length || 0), 0);
+
+            // Update cards
+            document.querySelector('.card.bg-primary h2').textContent = totalClasses;
+            document.querySelector('.card.bg-success h2').textContent = activeClasses;
+            document.querySelector('.card.bg-info h2').textContent = totalStudents;
+        }
+
+        // Fungsi untuk update tabel kelas terbaru
+        function updateRecentClasses(classes) {
+            const tbody = document.querySelector('table tbody');
+            tbody.innerHTML = '';
+
+            if (classes.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center">Belum ada kelas yang ditugaskan</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // Ambil 5 kelas terbaru
+            classes.slice(0, 5).forEach(classItem => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${classItem.name}</td>
+                        <td>${classItem.students?.length || 0}</td>
+                        <td>
+                            <span class="badge bg-${classItem.status === 'active' ? 'success' : 'secondary'}">
+                                ${classItem.status === 'active' ? 'Aktif' : 'Tidak Aktif'}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="card-footer bg-white border-top-0">
+                                <div class="d-grid gap-2">
+                                    <a href="/teacher/classes/${classItem.id}/tasks" 
+                                       class="btn btn-outline-primary">
+                                        <i class="bi bi-list-task"></i> Manajemen Tugas
+                                    </a>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
         // Event listener untuk form logout
         document.querySelector('form[action="{{ route("logout") }}"]').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -171,33 +286,6 @@
                     // Jika terjadi error, tetap redirect ke login
                     window.location.href = '/login';
                 }
-            }
-        });
-
-        // Tambahkan script untuk mengambil data profile
-        document.addEventListener('DOMContentLoaded', async function() {
-            try {
-                const response = await fetch('/api/v1/profile', {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Accept': 'application/json'
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('userName').textContent = data.user.name;
-                    document.getElementById('welcomeUserName').textContent = data.user.name;
-                } else {
-                    const errorText = 'Error loading name';
-                    document.getElementById('userName').textContent = errorText;
-                    document.getElementById('welcomeUserName').textContent = errorText;
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                const errorText = 'Error loading name';
-                document.getElementById('userName').textContent = errorText;
-                document.getElementById('welcomeUserName').textContent = errorText;
             }
         });
     </script>

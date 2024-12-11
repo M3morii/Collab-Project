@@ -32,11 +32,18 @@ class TeacherDashboardController extends Controller
                 ->when($request->status, function($query, $status) {
                     return $query->where('status', $status);
                 })
-                ->paginate(10);
+                ->get();
 
-            return view('teacher.classes', compact('classes'));
+            return response()->json([
+                'status' => 'success',
+                'data' => ClassResource::collection($classes)
+            ]);
+            
         } catch (\Exception $e) {
-            return back()->with('error', 'Gagal memuat daftar kelas');
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal memuat daftar kelas'
+            ], 500);
         }
     }
 }
