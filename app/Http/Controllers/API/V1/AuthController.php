@@ -46,6 +46,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Registrasi berhasil! Silakan cek email Anda untuk verifikasi.',
+            'verification_required' => true,
             'user' => $user,
             'token' => $token,
         ], 201);
@@ -54,10 +55,24 @@ class AuthController extends Controller
     public function login(LoginRequest $request): JsonResponse
     {
         $result = $this->authService->login($request->validated());
+        $user = $result['user'];
+
+        // Skip pengecekan untuk admin
+        if ($user->role !== 'admin' && !$user->hasVerifiedEmail()) {
+            // Kirim ulang email verifikasi
+            $user->sendEmailVerificationNotification();
+
+            return response()->json([
+                'message' => 'Email belum diverifikasi. Link verifikasi telah dikirim ke email Anda.',
+                'verification_required' => true,
+                'user' => new UserResource($user),
+                'token' => $result['token']
+            ], 403);
+        }
 
         return response()->json([
             'message' => 'Login successful',
-            'user' => new UserResource($result['user']),
+            'user' => new UserResource($user),
             'token' => $result['token']
         ]);
     }
