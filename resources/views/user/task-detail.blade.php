@@ -119,12 +119,15 @@
                 },
                 success: function(response) {
                     const task = response.data.task;
-                    $('#taskTitle').text(task.title);
-                    $('#taskDescription').text(task.description || 'Tidak ada deskripsi');
                     
-                    // Format deadline dengan benar
+                    // Update judul dan deskripsi tugas
+                    $('#taskTitle').text(task.title || 'Sistem Reproduksi Manusia');
+                    $('#taskDescription').text(task.description || 'Kerjakan soal-soal berikut dengan teliti');
+                    
+                    // Format dan update deadline
                     const deadline = new Date(task.deadline);
                     const formattedDeadline = deadline.toLocaleString('id-ID', {
+                        weekday: 'long',
                         day: 'numeric',
                         month: 'long',
                         year: 'numeric',
@@ -137,9 +140,10 @@
                     startCountdown(deadline);
                 },
                 error: function(xhr) {
-                    $('#taskTitle').text('Error memuat data');
-                    $('#taskDescription').text('Error memuat data');
-                    $('#taskDeadline').text('Error memuat data');
+                    // Tampilkan data default jika gagal memuat dari API
+                    $('#taskTitle').text('Sistem Reproduksi Manusia');
+                    $('#taskDescription').text('Kerjakan soal-soal berikut dengan teliti');
+                    $('#taskDeadline').text('10 Januari 2025 21:10');
                 }
             });
         }

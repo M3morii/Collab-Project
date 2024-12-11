@@ -138,10 +138,9 @@
                                 minute: '2-digit'
                             });
 
-                            // Cek status tugas
-                            const isSubmitted = task.status === 'submitted' || 
-                                              (new URLSearchParams(window.location.search).get('taskId') == task.id && 
-                                               new URLSearchParams(window.location.search).get('status') === 'submitted');
+                            // Cek status pengumpulan dari localStorage
+                            const submittedTasks = JSON.parse(localStorage.getItem('submittedTasks') || '{}');
+                            const isSubmitted = submittedTasks[task.id] === true || task.status === 'submitted';
                             
                             html += `
                                 <div class="card mb-2">
@@ -183,9 +182,17 @@
 
                     $('#tasksList').html(html);
 
-                    // Tampilkan notifikasi jika baru selesai mengumpulkan
+                    // Cek status dari parameter URL
                     const status = new URLSearchParams(window.location.search).get('status');
-                    if (status === 'submitted') {
+                    const taskId = new URLSearchParams(window.location.search).get('taskId');
+                    
+                    if (status === 'submitted' && taskId) {
+                        // Simpan status pengumpulan ke localStorage
+                        const submittedTasks = JSON.parse(localStorage.getItem('submittedTasks') || '{}');
+                        submittedTasks[taskId] = true;
+                        localStorage.setItem('submittedTasks', JSON.stringify(submittedTasks));
+
+                        // Tampilkan notifikasi
                         Swal.fire({
                             title: 'Tugas Berhasil Dikumpulkan!',
                             text: 'Terima kasih telah mengerjakan tugas',
@@ -193,6 +200,7 @@
                             timer: 2000,
                             showConfirmButton: false
                         });
+
                         // Bersihkan parameter URL
                         window.history.replaceState({}, document.title, `/student/classes/${classId}`);
                     }
